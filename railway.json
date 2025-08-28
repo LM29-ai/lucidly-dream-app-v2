@@ -1,5 +1,5 @@
 {
   "deploy": {
-    "startCommand": "web: python server.py"
+    "startCommand": "python server.py"
   }
 }
