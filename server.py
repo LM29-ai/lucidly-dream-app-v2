@@ -39,8 +39,9 @@ def register(user_data: dict):
         "role": "dreamer"
     }
     
+    # FIXED: Frontend expects 'token' not 'access_token'
     return {
-        "access_token": f"token_{user_id}",
+        "token": f"token_{user_id}",
         "token_type": "bearer",
         "user": users_db[email]
     }
@@ -51,8 +52,9 @@ def login(credentials: dict):
     
     if email in users_db:
         user = users_db[email]
+        # FIXED: Frontend expects 'token' not 'access_token'
         return {
-            "access_token": f"token_{user['id']}",
+            "token": f"token_{user['id']}",
             "token_type": "bearer", 
             "user": user
         }
