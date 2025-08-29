@@ -1,9 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import uvicorn
 from datetime import datetime
-import base64
+from typing import Optional
 
 app = FastAPI(title="Lucidly API")
 
@@ -18,7 +18,7 @@ app.add_middleware(
 # Simple in-memory storage
 users_db = {}
 dreams_db = {}
-user_tokens = {}  # Track which user is logged in
+user_tokens = {}
 
 @app.get("/")
 def root():
@@ -33,6 +33,9 @@ def register(user_data: dict):
     email = user_data.get("email", "")
     name = user_data.get("name", "")
     
+    if email in users_db:
+        return {"error": "Email already registered"}
+    
     user_id = f"user_{len(users_db) + 1}"
     user_profile = {
         "id": user_id,
@@ -40,7 +43,6 @@ def register(user_data: dict):
         "email": email,
         "is_premium": False,
         "role": "dreamer",
-        # FREE TIER - 3 LUCY TOKENS!
         "lucy_tokens_used": 0,
         "lucy_tokens_limit": 3,
         "image_tokens_used": 0,
@@ -63,6 +65,7 @@ def register(user_data: dict):
 @app.post("/api/auth/login") 
 def login(credentials: dict):
     email = credentials.get("email", "")
+    password = credentials.get("password", "")
     
     if email in users_db:
         user = users_db[email]
@@ -76,54 +79,50 @@ def login(credentials: dict):
     else:
         return {"error": "User not found"}
 
-# FIXED: Get real user based on token (no more test user!)
-def get_user_from_token(auth_header: str = None):
-    if not auth_header:
+# FIXED: Proper header extraction!
+def get_user_from_header(authorization: Optional[str] = Header(None)):
+    if not authorization:
         return None
     
     try:
-        token = auth_header.replace("Bearer ", "")
+        token = authorization.replace("Bearer ", "")
         return user_tokens.get(token)
     except:
         return None
 
 @app.get("/api/auth/me")
-def get_me(authorization: str = None):
-    # FIXED: Return actual logged-in user, not test user
-    user = get_user_from_token(authorization)
+def get_me(authorization: Optional[str] = Header(None)):
+    user = get_user_from_header(authorization)
     if user:
         return user
     else:
-        return {
-            "error": "Not authenticated"
-        }
+        return {"error": "Not authenticated"}
 
-# DREAMS ENDPOINTS
+# DREAMS ENDPOINTS (FIXED!)
 @app.get("/api/dreams")
-def get_dreams(authorization: str = None):
-    user = get_user_from_token(authorization)
+def get_dreams(authorization: Optional[str] = Header(None)):
+    user = get_user_from_header(authorization)
     if not user:
         return []
     
-    # Return dreams for the actual user
     user_dreams = [dream for dream in dreams_db.values() if dream.get("user_id") == user["id"]]
     return user_dreams
 
 @app.post("/api/dreams")
-def create_dream(dream_data: dict, authorization: str = None):
-    user = get_user_from_token(authorization)
+def create_dream(dream_data: dict, authorization: Optional[str] = Header(None)):
+    user = get_user_from_header(authorization)
     if not user:
         return {"error": "Authentication required"}
     
     dream_id = f"dream_{len(dreams_db) + 1}"
     dream = {
         "id": dream_id,
-        "user_id": user["id"],  # FIXED: Associate with real user
+        "user_id": user["id"],
         "content": dream_data.get("content", ""),
         "mood": dream_data.get("mood", "peaceful"),
-        "tags": dream_data.get("tags", []),
+        "tags": dream_data.get("tags", []),  # FIXED: Always array
         "created_at": datetime.now().isoformat(),
-        "user_name": user["name"],  # FIXED: Use real user name
+        "user_name": user["name"],
         "user_role": user["role"],
         "has_liked": False,
         "ai_interpretation": None,
@@ -136,65 +135,71 @@ def create_dream(dream_data: dict, authorization: str = None):
 
 @app.get("/api/dreams/{dream_id}")
 def get_dream(dream_id: str):
-    return dreams_db.get(dream_id, {"error": "Dream not found"})
+    dream = dreams_db.get(dream_id, {"error": "Dream not found"})
+    # FIXED: Ensure tags is always an array
+    if dream and "tags" not in dream:
+        dream["tags"] = []
+    return dream
 
-# AI IMAGE GENERATION ENDPOINT (FIXED!)
+# AI IMAGE GENERATION (FIXED!)
 @app.post("/api/dreams/{dream_id}/generate-image")
-def generate_dream_image(dream_id: str, image_data: dict, authorization: str = None):
-    user = get_user_from_token(authorization)
+def generate_dream_image(dream_id: str, image_data: dict, authorization: Optional[str] = Header(None)):
+    user = get_user_from_header(authorization)
     if not user:
         return {"error": "Authentication required"}
     
-    # Check image token limits
+    # Check limits
     if not user.get("is_premium", False) and user.get("image_tokens_used", 0) >= user.get("image_tokens_limit", 3):
         return {
             "error": "Image generation limit reached",
-            "message": f"You've used all {user.get('image_tokens_limit', 3)} free image generations. Upgrade to premium for unlimited access!"
+            "message": f"You've used all {user.get('image_tokens_limit', 3)} free image generations. Upgrade to premium!"
         }
     
-    # IMPROVED: Better mock image (colorful gradient)
-    mock_image_base64 = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM2MzY2ZjEiLz48c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iIzhhNWNmNiIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2E4NTVmNyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JhZCkiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE4IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkFJIEdlbmVyYXRlZCBJbWFnZSDinajvuI88L3RleHQ+PC9zdmc+"
+    # Generate mock image
+    mock_image = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM2MzY2ZjEiLz48c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iIzhhNWNmNiIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2E4NTVmNyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JhZCkiLz48dGV4dCB4PSI1MCUiIHk9IjQ1JSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkFJIEdlbmVyYXRlZCBJbWFnZTwvdGV4dD48dGV4dCB4PSI1MCUiIHk9IjYwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkRyZWFtOiAje2RyZWFtX2lkfTwvdGV4dD48L3N2Zz4="
     
-    # Update dream with generated image
+    # Update dream and user tokens
     if dream_id in dreams_db:
-        dreams_db[dream_id]["ai_image"] = mock_image_base64
+        dreams_db[dream_id]["ai_image"] = mock_image
     
-    # Increment user's image tokens
+    # Update user token count
     if not user.get("is_premium", False):
-        users_db[user["email"]]["image_tokens_used"] = user.get("image_tokens_used", 0) + 1
-        user_tokens[f"token_{user['id']}"]["image_tokens_used"] = user.get("image_tokens_used", 0) + 1
+        email = user.get("email")
+        if email and email in users_db:
+            users_db[email]["image_tokens_used"] = user.get("image_tokens_used", 0) + 1
+            user_tokens[f"token_{user['id']}"]["image_tokens_used"] = user.get("image_tokens_used", 0) + 1
     
     return {
         "message": "Image generated successfully!",
-        "image_url": mock_image_base64,
-        "image_base64": mock_image_base64.split(',')[1] if ',' in mock_image_base64 else mock_image_base64,
+        "image_url": mock_image,
+        "image_base64": mock_image,
         "task_id": f"img_task_{dream_id}",
         "tokens_remaining": max(0, user.get("image_tokens_limit", 3) - user.get("image_tokens_used", 0) - 1)
     }
 
-# AI VIDEO GENERATION ENDPOINT
+# AI VIDEO GENERATION (FIXED!)
 @app.post("/api/dreams/{dream_id}/generate-video")
-def generate_dream_video(dream_id: str, video_data: dict, authorization: str = None):
-    user = get_user_from_token(authorization)
+def generate_dream_video(dream_id: str, video_data: dict, authorization: Optional[str] = Header(None)):
+    user = get_user_from_header(authorization)
     if not user:
         return {"error": "Authentication required"}
     
-    # Check video token limits  
     if not user.get("is_premium", False) and user.get("video_tokens_used", 0) >= user.get("video_tokens_limit", 3):
         return {
             "error": "Video generation limit reached",
-            "message": f"You've used all {user.get('video_tokens_limit', 3)} free video generations. Upgrade to premium for unlimited access!"
+            "message": f"You've used all {user.get('video_tokens_limit', 3)} free video generations. Upgrade to premium!"
         }
     
-    # Mock video response
+    # Mock video
     if dream_id in dreams_db:
         dreams_db[dream_id]["ai_video"] = "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4"
-        dreams_db[dream_id]["video_base64"] = "mock_video_base64_data"
     
-    # Increment user's video tokens
+    # Update tokens
     if not user.get("is_premium", False):
-        users_db[user["email"]]["video_tokens_used"] = user.get("video_tokens_used", 0) + 1
-        user_tokens[f"token_{user['id']}"]["video_tokens_used"] = user.get("video_tokens_used", 0) + 1
+        email = user.get("email")
+        if email and email in users_db:
+            users_db[email]["video_tokens_used"] = user.get("video_tokens_used", 0) + 1
+            user_tokens[f"token_{user['id']}"]["video_tokens_used"] = user.get("video_tokens_used", 0) + 1
     
     return {
         "message": "Video generation started",
@@ -209,14 +214,13 @@ def get_video_status(dream_id: str):
     return {
         "status": "completed",
         "video_url": "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
-        "video_base64": "mock_video_base64_data",
         "progress": "100%"
     }
 
-# LUCY AI INTERPRETATION ENDPOINT (FIXED - FREE TIER WORKING!)
+# LUCY AI (FIXED!)
 @app.post("/api/dreams/{dream_id}/lucy-interpretation")
-def get_lucy_interpretation(dream_id: str, request_data: dict, authorization: str = None):
-    user = get_user_from_token(authorization)
+def get_lucy_interpretation(dream_id: str, request_data: dict, authorization: Optional[str] = Header(None)):
+    user = get_user_from_header(authorization)
     if not user:
         return {"error": "Authentication required"}
     
@@ -224,56 +228,47 @@ def get_lucy_interpretation(dream_id: str, request_data: dict, authorization: st
     if not dream:
         return {"error": "Dream not found"}
     
-    # FIXED: Check Lucy token limits (FREE TIER!)
+    # Check Lucy tokens
     if not user.get("is_premium", False) and user.get("lucy_tokens_used", 0) >= user.get("lucy_tokens_limit", 3):
         return {
             "error": "Lucy interpretation limit reached",
-            "message": f"You've used all {user.get('lucy_tokens_limit', 3)} free Lucy interpretations. Upgrade to premium for unlimited Lucy wisdom!"
+            "message": f"You've used all {user.get('lucy_tokens_limit', 3)} free Lucy interpretations. Upgrade to premium!"
         }
     
     interpretation = f"""Hello {user.get('name', 'dreamer')}! ✨
 
-I've carefully analyzed your dream about "{dream.get('content', 'your experience')[:50]}..." and here's what I see:
+I've analyzed your dream: "{dream.get('content', 'your experience')[:50]}..."
 
-🌙 **Symbolic Meaning**: Your dream reflects your subconscious processing of recent experiences and emotions. The imagery suggests transformation and personal growth on your horizon.
+🌙 **Symbolic Meaning**: Your dream reflects transformation and growth.
 
-💫 **Emotional Insights**: The {dream.get('mood', 'peaceful')} mood you felt indicates your inner emotional state. This suggests you're seeking balance and harmony in your current life situation.
+💫 **Emotional Insights**: The {dream.get('mood', 'peaceful')} mood suggests inner balance.
 
-🔮 **Deeper Analysis**: This dream may represent:
-- A desire for positive change or new beginnings  
-- Your mind processing daily experiences and emotions
-- Inner wisdom guiding you toward personal growth
-- Unresolved feelings seeking resolution and peace
+✨ **Lucy's Wisdom**: Trust your intuition, {user.get('name', 'dear dreamer')}!
 
-✨ **Lucy's Personal Message**: You have beautiful dream energy, {user.get('name', 'dear dreamer')}! Your subconscious is actively working to help you grow and find clarity. Trust the messages your dreams bring you.
+Sweet dreams! - Lucy ✨
 
-Remember, you are the ultimate interpreter of your own dreams. I'm simply here to guide you on this magical journey of self-discovery.
-
-Keep dreaming and exploring! 
-- Lucy ✨
-
-*You have {2 - user.get('lucy_tokens_used', 0)} Lucy interpretations remaining*"""
+*{2 - user.get('lucy_tokens_used', 0)} interpretations remaining*"""
     
-    # Update dream with interpretation
+    # Update dream and tokens
     if dream_id in dreams_db:
         dreams_db[dream_id]["ai_interpretation"] = interpretation
     
-    # Increment user's Lucy tokens
     if not user.get("is_premium", False):
-        users_db[user["email"]]["lucy_tokens_used"] = user.get("lucy_tokens_used", 0) + 1
-        user_tokens[f"token_{user['id']}"]["lucy_tokens_used"] = user.get("lucy_tokens_used", 0) + 1
+        email = user.get("email")
+        if email and email in users_db:
+            users_db[email]["lucy_tokens_used"] = user.get("lucy_tokens_used", 0) + 1
+            user_tokens[f"token_{user['id']}"]["lucy_tokens_used"] = user.get("lucy_tokens_used", 0) + 1
     
     return {
         "dream_id": dream_id,
         "interpretation": interpretation,
-        "cached": False,
-        "tokens_remaining": max(0, user.get("lucy_tokens_limit", 3) - user.get("lucy_tokens_used", 0) - 1)
+        "cached": False
     }
 
-# DASHBOARD ENDPOINTS
+# DASHBOARD (FIXED!)
 @app.get("/api/dashboard/stats")
-def get_dashboard_stats(authorization: str = None):
-    user = get_user_from_token(authorization)
+def get_dashboard_stats(authorization: Optional[str] = Header(None)):
+    user = get_user_from_header(authorization)
     if not user:
         return {"error": "Authentication required"}
     
@@ -285,12 +280,12 @@ def get_dashboard_stats(authorization: str = None):
         "lucid_percentage": 0,
         "current_streak": 1 if user_dreams else 0,
         "longest_streak": 1 if user_dreams else 0,
-        "ai_creations_count": sum(1 for dream in user_dreams if dream.get("ai_image") or dream.get("ai_video")),
+        "ai_creations_count": len([d for d in user_dreams if d.get("ai_image") or d.get("ai_video")]),
         "mood_distribution": {"peaceful": 60, "excited": 30, "mysterious": 10},
-        "recent_dreams": user_dreams[-3:]  # Last 3 dreams
+        "recent_dreams": user_dreams[-3:]
     }
 
-# CHALLENGES ENDPOINTS
+# OTHER ENDPOINTS
 @app.get("/api/challenges")
 def get_challenges():
     return [
@@ -307,7 +302,6 @@ def get_challenges():
         }
     ]
 
-# SOCIAL/FEED ENDPOINTS
 @app.get("/api/feed")
 def get_feed():
     return []
