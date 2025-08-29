@@ -16,6 +16,7 @@ app.add_middleware(
 
 # Simple in-memory storage
 users_db = {}
+dreams_db = {}
 
 @app.get("/")
 def root():
@@ -39,7 +40,6 @@ def register(user_data: dict):
         "role": "dreamer"
     }
     
-    # FIXED: Frontend expects 'token' not 'access_token'
     return {
         "token": f"token_{user_id}",
         "token_type": "bearer",
@@ -52,7 +52,6 @@ def login(credentials: dict):
     
     if email in users_db:
         user = users_db[email]
-        # FIXED: Frontend expects 'token' not 'access_token'
         return {
             "token": f"token_{user['id']}",
             "token_type": "bearer", 
@@ -70,6 +69,71 @@ def get_me():
         "is_premium": False,
         "role": "dreamer"
     }
+
+# DREAMS ENDPOINTS (Added to fix 404s)
+@app.get("/api/dreams")
+def get_dreams():
+    return []  # Empty list for now
+
+@app.post("/api/dreams")
+def create_dream(dream_data: dict):
+    dream_id = f"dream_{len(dreams_db) + 1}"
+    dream = {
+        "id": dream_id,
+        "content": dream_data.get("content", ""),
+        "mood": dream_data.get("mood", "peaceful"),
+        "tags": dream_data.get("tags", []),
+        "created_at": datetime.now().isoformat(),
+        "user_name": "Test User",
+        "user_role": "dreamer",
+        "has_liked": False
+    }
+    dreams_db[dream_id] = dream
+    return dream
+
+@app.get("/api/dreams/{dream_id}")
+def get_dream(dream_id: str):
+    return dreams_db.get(dream_id, {"error": "Dream not found"})
+
+# DASHBOARD ENDPOINTS (Added to fix 404s)
+@app.get("/api/dashboard/stats")
+def get_dashboard_stats():
+    return {
+        "dream_count": len(dreams_db),
+        "lucid_count": 0,
+        "lucid_percentage": 0,
+        "current_streak": 0,
+        "longest_streak": 0,
+        "ai_creations_count": 0,
+        "mood_distribution": {},
+        "recent_dreams": list(dreams_db.values())[-5:]  # Last 5 dreams
+    }
+
+# CHALLENGES ENDPOINTS (Added to fix 404s)
+@app.get("/api/challenges")
+def get_challenges():
+    return [
+        {
+            "id": "weekly-lucid",
+            "title": "Weekly Lucid Challenge",
+            "description": "Achieve lucid dreaming 3 times this week",
+            "type": "lucid_count",
+            "target": 3,
+            "reward": "Special badge + 100 points",
+            "starts_at": "2025-01-20T00:00:00Z",
+            "ends_at": "2025-01-27T23:59:59Z",
+            "is_active": True
+        }
+    ]
+
+# SOCIAL/FEED ENDPOINTS (Added to fix 404s)
+@app.get("/api/feed")
+def get_feed():
+    return []  # Empty feed for now
+
+@app.get("/api/gallery/dreams")
+def get_gallery():
+    return []  # Empty gallery for now
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
