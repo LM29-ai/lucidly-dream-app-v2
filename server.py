@@ -37,7 +37,14 @@ def register(user_data: dict):
         "name": name,
         "email": email,
         "is_premium": False,
-        "role": "dreamer"
+        "role": "dreamer",
+        # ADDED: Lucy AI trial tokens!
+        "lucy_tokens_used": 0,
+        "lucy_tokens_limit": 3,
+        "image_tokens_used": 0,
+        "image_tokens_limit": 3,
+        "video_tokens_used": 0,
+        "video_tokens_limit": 3
     }
     
     return {
@@ -67,7 +74,14 @@ def get_me():
         "name": "Test User", 
         "email": "test@example.com",
         "is_premium": False,
-        "role": "dreamer"
+        "role": "dreamer",
+        # ADDED: Lucy AI trial tokens visible in profile!
+        "lucy_tokens_used": 0,
+        "lucy_tokens_limit": 3,
+        "image_tokens_used": 0,
+        "image_tokens_limit": 3,
+        "video_tokens_used": 0,
+        "video_tokens_limit": 3
     }
 
 # DREAMS ENDPOINTS
@@ -86,7 +100,8 @@ def create_dream(dream_data: dict):
         "created_at": datetime.now().isoformat(),
         "user_name": "Test User",
         "user_role": "dreamer",
-        "has_liked": False
+        "has_liked": False,
+        "ai_interpretation": None  # Will be filled by Lucy
     }
     dreams_db[dream_id] = dream
     return dream
@@ -95,7 +110,7 @@ def create_dream(dream_data: dict):
 def get_dream(dream_id: str):
     return dreams_db.get(dream_id, {"error": "Dream not found"})
 
-# AI IMAGE GENERATION ENDPOINT (FIXED!)
+# AI IMAGE GENERATION ENDPOINT
 @app.post("/api/dreams/{dream_id}/generate-image")
 def generate_dream_image(dream_id: str, image_data: dict):
     return {
@@ -103,6 +118,40 @@ def generate_dream_image(dream_id: str, image_data: dict):
         "task_id": f"img_task_{dream_id}",
         "estimated_time": "30 seconds",
         "demo_mode": True
+    }
+
+# LUCY AI INTERPRETATION ENDPOINT (ADDED!)
+@app.post("/api/dreams/{dream_id}/lucy-interpretation")
+def get_lucy_interpretation(dream_id: str, request_data: dict):
+    # Simulate Lucy AI interpretation with trial tokens
+    dream = dreams_db.get(dream_id)
+    if not dream:
+        return {"error": "Dream not found"}
+    
+    # Mock Lucy interpretation - you can test this!
+    interpretation = f"""Hello dreamer! ✨
+
+I've analyzed your dream about "{dream.get('content', 'your experience')[:50]}..." and here's what I see:
+
+🌙 **Symbolic Meaning**: Your dream reflects your subconscious processing of recent experiences and emotions.
+
+💫 **Emotional Insights**: The mood you felt ({dream.get('mood', 'peaceful')}) suggests your inner emotional state seeking balance.
+
+🔮 **Deeper Analysis**: This dream may represent personal growth, transformation, or unresolved feelings you're working through.
+
+Remember, dreams are your mind's way of organizing thoughts and emotions. Trust your intuition about what resonates most with you.
+
+Sweet dreams! 
+- Lucy ✨"""
+    
+    # Update dream with interpretation
+    if dream_id in dreams_db:
+        dreams_db[dream_id]["ai_interpretation"] = interpretation
+    
+    return {
+        "dream_id": dream_id,
+        "interpretation": interpretation,
+        "cached": False
     }
 
 # DASHBOARD ENDPOINTS
@@ -115,7 +164,7 @@ def get_dashboard_stats():
         "current_streak": 0,
         "longest_streak": 0,
         "ai_creations_count": 0,
-        "mood_distribution": {},
+        "mood_distribution": {"peaceful": 80, "excited": 20},
         "recent_dreams": list(dreams_db.values())[-5:]
     }
 
@@ -144,26 +193,7 @@ def get_feed():
 @app.get("/api/gallery/dreams")
 def get_gallery():
     return []
-# AI IMAGE GENERATION ENDPOINT (Added to fix 404)
-@app.post("/api/dreams/{dream_id}/generate-image")
-def generate_dream_image(dream_id: str, image_data: dict):
-    # For now, return a mock response until we add real AI integration
-    return {
-        "message": "Image generation started",
-        "task_id": f"img_task_{dream_id}",
-        "estimated_time": "30 seconds",
-        "mock_response": True
-    }
 
-# OPTIONAL: Add video generation endpoint too (if needed)
-@app.post("/api/dreams/{dream_id}/generate-video")
-def generate_dream_video(dream_id: str):
-    return {
-        "message": "Video generation not available in demo mode",
-        "task_id": f"vid_task_{dream_id}",
-        "estimated_time": "60 seconds",
-        "mock_response": True
-    }
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
