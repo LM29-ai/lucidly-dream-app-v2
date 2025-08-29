@@ -70,10 +70,10 @@ def get_me():
         "role": "dreamer"
     }
 
-# DREAMS ENDPOINTS (Added to fix 404s)
+# DREAMS ENDPOINTS
 @app.get("/api/dreams")
 def get_dreams():
-    return []  # Empty list for now
+    return []
 
 @app.post("/api/dreams")
 def create_dream(dream_data: dict):
@@ -95,7 +95,17 @@ def create_dream(dream_data: dict):
 def get_dream(dream_id: str):
     return dreams_db.get(dream_id, {"error": "Dream not found"})
 
-# DASHBOARD ENDPOINTS (Added to fix 404s)
+# AI IMAGE GENERATION ENDPOINT (FIXED!)
+@app.post("/api/dreams/{dream_id}/generate-image")
+def generate_dream_image(dream_id: str, image_data: dict):
+    return {
+        "message": "Image generation started (demo mode)",
+        "task_id": f"img_task_{dream_id}",
+        "estimated_time": "30 seconds",
+        "demo_mode": True
+    }
+
+# DASHBOARD ENDPOINTS
 @app.get("/api/dashboard/stats")
 def get_dashboard_stats():
     return {
@@ -106,10 +116,10 @@ def get_dashboard_stats():
         "longest_streak": 0,
         "ai_creations_count": 0,
         "mood_distribution": {},
-        "recent_dreams": list(dreams_db.values())[-5:]  # Last 5 dreams
+        "recent_dreams": list(dreams_db.values())[-5:]
     }
 
-# CHALLENGES ENDPOINTS (Added to fix 404s)
+# CHALLENGES ENDPOINTS
 @app.get("/api/challenges")
 def get_challenges():
     return [
@@ -126,15 +136,34 @@ def get_challenges():
         }
     ]
 
-# SOCIAL/FEED ENDPOINTS (Added to fix 404s)
+# SOCIAL/FEED ENDPOINTS
 @app.get("/api/feed")
 def get_feed():
-    return []  # Empty feed for now
+    return []
 
 @app.get("/api/gallery/dreams")
 def get_gallery():
-    return []  # Empty gallery for now
+    return []
+# AI IMAGE GENERATION ENDPOINT (Added to fix 404)
+@app.post("/api/dreams/{dream_id}/generate-image")
+def generate_dream_image(dream_id: str, image_data: dict):
+    # For now, return a mock response until we add real AI integration
+    return {
+        "message": "Image generation started",
+        "task_id": f"img_task_{dream_id}",
+        "estimated_time": "30 seconds",
+        "mock_response": True
+    }
 
+# OPTIONAL: Add video generation endpoint too (if needed)
+@app.post("/api/dreams/{dream_id}/generate-video")
+def generate_dream_video(dream_id: str):
+    return {
+        "message": "Video generation not available in demo mode",
+        "task_id": f"vid_task_{dream_id}",
+        "estimated_time": "60 seconds",
+        "mock_response": True
+    }
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
