@@ -1,29 +1,41 @@
 {
   "expo": {
-    "name": "lucidly_app",
-    "slug": "lucidly_app",
-    "version": "1.0.0",
+    "name": "Lucidly - AI Dream Journal",
+    "slug": "lucidly-dream-journal",
+    "version": "1.0.0", 
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "scheme": "lucidly",
+    "userInterfaceStyle": "automatic",
+    "description": "Turn dreams into AI art. Journal your dreams and watch AI paint them.",
+    "owner": "clutch-code",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#4338ca"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.clutchcode.lucidly"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#4338ca"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.clutchcode.lucidly",
+      "permissions": ["android.permission.INTERNET"],
+      "versionCode": 1
     },
     "web": {
+      "bundler": "metro",
+      "output": "static",
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
