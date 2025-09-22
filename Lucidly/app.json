@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Lucidly",
+    "slug": "lucidly",
+    "scheme": "lucidly",
+    "plugins": [
+      "expo-router",
+      "expo-asset"
+    ],
+    "android": {
+      "package": "com.lucidlyapp.app",
+      "permissions": [
+        "com.android.vending.BILLING"
+      ]
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a38e5048-5154-4fe9-ac8c-a58e3cd72b61"
+      }
+    }
+  }
+}

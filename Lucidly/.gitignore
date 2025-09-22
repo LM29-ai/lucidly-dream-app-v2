@@ -1,0 +1,12 @@
+node_modules
+.expo
+.expo-shared
+dist
+build
+android/.gradle
+android/build
+ios/build
+*.iml
+*.log
+.DS_Store
+.metro-cache

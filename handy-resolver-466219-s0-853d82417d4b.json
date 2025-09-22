@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "handy-resolver-466219-s0",
+  "private_key_id": "853d82417d4b9fefdae78204b7ccd626875dc295",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCm14bKQVHYnRyN\nMnF+f1YiFiSjIn8cdA7kpUN5hI7Cm/Oo99qB3U/cfmXK6r8pLQu+9rgTItArrpEp\nKfd2juQDUKjrdR8lAY2s3zx06rRdkGVZl+PJMOLjtEiXo9ikVhwUkySnj5gm5PV4\no22n7ph/i20ZpWBAN3a+BryvPH5EFyTVNU6Xv/CAGyYLbVIAI5Ct+jaYe2q6YS+G\nPNYFmzSefkxLit1kc5AlqTZAAW1zIecW71vLQvbpG06HZ8AHWOpJW6N0d2UBQ3FZ\n52otYlRjpkChgaFKCLwXu8eIs7mDHTTcivnkwArswWUKy9Q484ZfZ/SjtiBfDoST\n/qT72t4/AgMBAAECggEALVA5GCKQf6QANqseHwynkJ9x+OqsGka9KsVl45Goklt3\n3IrgikfY4lpj/C4wmBbXa1in2u6oGk0RuNvgjY82h133WufW+x6GY47H5Ts/nG/U\nzvYNVD3WSaDT3HeQJeYLP11NZcL+wIWL0+WTKTqIqY9tJLuBPj+yHN9IjNGBu60a\nS2GITXMrwzzd7+rz5tXc09Ct3We4b30J+JTblqiGJEPsnyFtex0e51V/dttt9H42\nZzHRPxlqRI88gmLmyeFLHJSwfaFJtJDt90360LY+f/oaZcXgl9JEoSRI3pElinzY\nb4eaQCgUkYAJdCUSk0Yx6AUVBnv77bxNo4mOAhGLJQKBgQDrSdEJwhacTq5rcCKW\nwYQFI9VSbC7yIqgbPEemn0CL4v4ov15EBDwkWnnBr+VcVJ5+bPN/0EwBXm3AYDQw\nYc631JzNAPXVZ+KPgyzJm6vZzRhsWFX4kPxbfldszPTGrep2z80VkJzM+mVl/AcQ\nTDV5w5ziTluQqH7Xr7aXInxRTQKBgQC1h0fh7UrKRitk7SiEqpaao3xgg91pidgj\ngPc/IHQ0hoPFpNbg1ZcK2X9POJY/j6hO9sS3ycRr1JFOpVCjzodQQ/LhJaoV9jyU\nmg66C37CH4Qx38H+ScmzfIVBCpNjzDJKWiW+ThPxaqq2RdarFNKDSg0HXajTGUzp\n+A/L7OvnuwKBgQDXzQtiRNbSJERLnDzNQs5gnH4Sq9DfGrROzpn1FAlyhA6Stvqx\nraSvvx//auIWLjJ0SF+JcjXT55UIJfSYD403BFWQnXnccvzUnf5dJ1+WU0s8TEUF\nx4z+KcHrs4wqEeeDc5JpXgrC4kJQKLkd1JgThzuEQVQwOKqmDq6Mrf+R3QKBgEH5\nr/N59eO8Sws8cqx8/42me47sfi1cbxTAS5xC5Fkuxnev6HUAzAuibvXRADKLuMUy\nRN7zUxNJx6IIzV0rs9xFReH0eXPP8cakk1Ok1+Yf5EDoLS6JjOhSCnBQMq9jyKdj\nSjJ3WCI2/WKP0WyOfdA/uqqBrNlEacLjaIJaUob/AoGBAMA894e6iT2ifx2p7CA/\nLyqD4iYv3c1xPtQsNf+ncJy6GtJZB3jNFbguuPGjrLALo4oSoIojTeTFIjc5gwiu\n7NjslFP4kcHemtOFCnXK1GPWFfuBD3uHBXYlk5zdcwlLE+P7QLzkTHmf43lQnm1F\nkqW+UmGnq66cYtwHrf7DjNAW\n-----END PRIVATE KEY-----\n",
+  "client_email": "clutchcode-dev@handy-resolver-466219-s0.iam.gserviceaccount.com",
+  "client_id": "116338813948530401306",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/clutchcode-dev%40handy-resolver-466219-s0.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

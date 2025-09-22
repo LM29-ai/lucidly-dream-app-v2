@@ -1,0 +1,24 @@
+// android/settings.gradle — RN 0.74 / Expo SDK 54
+
+pluginManagement {
+  repositories {
+    gradlePluginPortal()
+    mavenCentral()
+    google()
+  }
+  // React Native settings plugin is provided via composite build in node_modules
+  includeBuild("../node_modules/@react-native/gradle-plugin")
+}
+
+plugins {
+  // IMPORTANT: no version here — resolves from includeBuild above
+  id("com.facebook.react.settings")
+  id("expo-autolinking")
+}
+
+rootProject.name = "Lucidly"
+include(":app")
+
+// Expo autolinking helper (safe to keep)
+apply(from = file("../node_modules/expo-modules-autolinking/android/expo-modules-settings.gradle"))
+useExpoModules()

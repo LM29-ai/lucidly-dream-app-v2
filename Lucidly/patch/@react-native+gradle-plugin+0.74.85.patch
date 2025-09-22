@@ -1,0 +1,14 @@
+diff --git a/node_modules/@react-native/gradle-plugin/build.gradle.kts b/node_modules/@react-native/gradle-plugin/build.gradle.kts
+index 1111111..2222222 100644
+--- a/node_modules/@react-native/gradle-plugin/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/build.gradle.kts
+@@ -7,7 +7,12 @@ import org.gradle.api.tasks.TaskProvider
+-import org.gradle.configurationcache.extensions.serviceOf
++// Some Gradle/Kotlin DSL combos don’t expose the configurationcache serviceOf extension.
++// Fall back to the older, widely available support serviceOf.
++@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
++import org.gradle.kotlin.dsl.support.serviceOf
+
+@@
+-          serviceOf<ModuleRegistry>()
++          serviceOf<ModuleRegistry>()
