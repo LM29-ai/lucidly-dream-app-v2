@@ -1,0 +1,108 @@
+diff --git a/node_modules/@react-native/gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.bin b/node_modules/@react-native/gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.bin
+new file mode 100644
+index 0000000..a942c3a
+Binary files /dev/null and b/node_modules/@react-native/gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.bin differ
+diff --git a/node_modules/@react-native/gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.lock b/node_modules/@react-native/gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.lock
+new file mode 100644
+index 0000000..8c03a25
+Binary files /dev/null and b/node_modules/@react-native/gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.lock differ
+diff --git a/node_modules/@react-native/gradle-plugin/.gradle/buildOutputCleanup/buildOutputCleanup.lock b/node_modules/@react-native/gradle-plugin/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+new file mode 100644
+index 0000000..be296b9
+Binary files /dev/null and b/node_modules/@react-native/gradle-plugin/.gradle/buildOutputCleanup/buildOutputCleanup.lock differ
+diff --git a/node_modules/@react-native/gradle-plugin/.gradle/buildOutputCleanup/cache.properties b/node_modules/@react-native/gradle-plugin/.gradle/buildOutputCleanup/cache.properties
+new file mode 100644
+index 0000000..0754cd6
+--- /dev/null
++++ b/node_modules/@react-native/gradle-plugin/.gradle/buildOutputCleanup/cache.properties
+@@ -0,0 +1,2 @@
++#Thu Sep 25 17:55:45 CDT 2025
++gradle.version=8.14.3
+diff --git a/node_modules/@react-native/gradle-plugin/.gradle/buildOutputCleanup/outputFiles.bin b/node_modules/@react-native/gradle-plugin/.gradle/buildOutputCleanup/outputFiles.bin
+new file mode 100644
+index 0000000..f2546b0
+Binary files /dev/null and b/node_modules/@react-native/gradle-plugin/.gradle/buildOutputCleanup/outputFiles.bin differ
+diff --git a/node_modules/@react-native/gradle-plugin/.gradle/file-system.probe b/node_modules/@react-native/gradle-plugin/.gradle/file-system.probe
+new file mode 100644
+index 0000000..f4320a9
+Binary files /dev/null and b/node_modules/@react-native/gradle-plugin/.gradle/file-system.probe differ
+diff --git a/node_modules/@react-native/gradle-plugin/build.gradle.kts b/node_modules/@react-native/gradle-plugin/build.gradle.kts
+index dfb97e0..c31a037 100644
+--- a/node_modules/@react-native/gradle-plugin/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/build.gradle.kts
+@@ -1,4 +1,4 @@
+-/*
++﻿/*
+  * Copyright (c) Meta Platforms, Inc. and affiliates.
+  *
+  * This source code is licensed under the MIT license found in the
+diff --git a/node_modules/@react-native/gradle-plugin/build/kotlin/compileKotlin/cacheable/dirty-sources.txt b/node_modules/@react-native/gradle-plugin/build/kotlin/compileKotlin/cacheable/dirty-sources.txt
+new file mode 100644
+index 0000000..e906015
+--- /dev/null
++++ b/node_modules/@react-native/gradle-plugin/build/kotlin/compileKotlin/cacheable/dirty-sources.txt
+@@ -0,0 +1,31 @@
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\PathUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\GenerateCodegenSchemaTask.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\ReactRootProjectPlugin.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PrepareBoostTask.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\internal\PrivateReactExtension.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\NdkConfiguratorUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\TaskConfiguration.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\BundleHermesCTask.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\FileUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\model\ModelCodegenConfigAndroid.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\model\ModelCodegenConfig.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\PropertyUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\GenerateCodegenArtifactsTask.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\ReactExtension.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\ReactPlugin.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\BackwardCompatUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\DependencyUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PrepareGlogTask.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\ProjectUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\AgpConfiguratorUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\BuildCodegenCLITask.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\TaskUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PreparePrefabHeadersTask.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\model\ModelPackageJson.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PrepareJSCTask.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PrepareLibeventTask.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\utils\PrefabPreprocessingEntry.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\JsonUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\KotlinStdlibCompatUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\JdkConfiguratorUtils.kt
++C:\dev\lucidly_app\Lucidly\node_modules\@react-native\gradle-plugin\src\main\kotlin\com\facebook\react\utils\Os.kt
+\ No newline at end of file
+diff --git a/node_modules/@react-native/gradle-plugin/build/kotlin/compileKotlin/local-state/build-history.bin b/node_modules/@react-native/gradle-plugin/build/kotlin/compileKotlin/local-state/build-history.bin
+new file mode 100644
+index 0000000..edc6b33
+Binary files /dev/null and b/node_modules/@react-native/gradle-plugin/build/kotlin/compileKotlin/local-state/build-history.bin differ
+diff --git a/node_modules/@react-native/gradle-plugin/build/pluginDescriptors/com.facebook.react.properties b/node_modules/@react-native/gradle-plugin/build/pluginDescriptors/com.facebook.react.properties
+new file mode 100644
+index 0000000..f3b415e
+--- /dev/null
++++ b/node_modules/@react-native/gradle-plugin/build/pluginDescriptors/com.facebook.react.properties
+@@ -0,0 +1 @@
++implementation-class=com.facebook.react.ReactPlugin
+diff --git a/node_modules/@react-native/gradle-plugin/build/pluginDescriptors/com.facebook.react.rootproject.properties b/node_modules/@react-native/gradle-plugin/build/pluginDescriptors/com.facebook.react.rootproject.properties
+new file mode 100644
+index 0000000..f82c5ab
+--- /dev/null
++++ b/node_modules/@react-native/gradle-plugin/build/pluginDescriptors/com.facebook.react.rootproject.properties
+@@ -0,0 +1 @@
++implementation-class=com.facebook.react.ReactRootProjectPlugin
+diff --git a/node_modules/@react-native/gradle-plugin/build/resources/main/META-INF/gradle-plugins/com.facebook.react.properties b/node_modules/@react-native/gradle-plugin/build/resources/main/META-INF/gradle-plugins/com.facebook.react.properties
+new file mode 100644
+index 0000000..f3b415e
+--- /dev/null
++++ b/node_modules/@react-native/gradle-plugin/build/resources/main/META-INF/gradle-plugins/com.facebook.react.properties
+@@ -0,0 +1 @@
++implementation-class=com.facebook.react.ReactPlugin
+diff --git a/node_modules/@react-native/gradle-plugin/build/resources/main/META-INF/gradle-plugins/com.facebook.react.rootproject.properties b/node_modules/@react-native/gradle-plugin/build/resources/main/META-INF/gradle-plugins/com.facebook.react.rootproject.properties
+new file mode 100644
+index 0000000..f82c5ab
+--- /dev/null
++++ b/node_modules/@react-native/gradle-plugin/build/resources/main/META-INF/gradle-plugins/com.facebook.react.rootproject.properties
+@@ -0,0 +1 @@
++implementation-class=com.facebook.react.ReactRootProjectPlugin
