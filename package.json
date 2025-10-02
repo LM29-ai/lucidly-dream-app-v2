@@ -11,7 +11,7 @@
     "export:embed:android": "expo export:embed --eager --platform android --dev false",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "postinstall": "node -e \"try{require('child_process').execSync('patch-package',{stdio:'inherit'})}catch(e){console.log('patch-package not found; continuing')}\" && node scripts/patch-rn-gradle-plugin.js || node -e \"console.log('patch script failed; continuing')\""
+    "postinstall": "patch-package && node scripts/patch-rn-gradle-plugin.js"
 ,
     "patch-package": "^8.0.0"
   },
@@ -41,3 +41,4 @@
     "node": ">=20.17.0"
   }
 }
+
