@@ -1,0 +1,30 @@
+name: EAS Android build (production)
+
+on:
+  push:
+    branches: [ "main" ]   # adjust as needed
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install EAS CLI
+        run: npm i -g eas-cli
+
+      - name: EAS Android build (production)
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+          # add any envs your build needs here
+        run: |
+          eas build --platform android --profile production --non-interactive
+          # If you want to submit to Play automatically, add:
+          # eas submit -p android --latest --non-interactive
