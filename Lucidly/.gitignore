@@ -1,3 +1,34 @@
+<<<<<<< HEAD
+<<<<<<< HEAD
+# Environment variables
+.env
+*.env.local
+*.env.production
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Build outputs
+dist/
+build/
+.expo/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Railway
+.railway/
+=======
 node_modules
 .expo
 .expo-shared
@@ -10,3 +41,19 @@ ios/build
 *.log
 .DS_Store
 .metro-cache
+>>>>>>> 03b9abe (Initial commit of real repo root)
+=======
+﻿node_modules/
+.android/
+.ios/
+android/.gradle/
+android/build/
+ios/build/
+.expo/
+.expo-shared/
+dist/
+build/
+.env*
+npm-debug.log*
+yarn-error.log*
+>>>>>>> 802a670 (Initial commit)

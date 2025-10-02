@@ -1,45 +1,26 @@
-// android/build.gradle  (root)
-plugins {
-  id("com.android.application")
-  id("org.jetbrains.kotlin.android")
-  id{"com.facebook.react"}   // app-level RN plugin
-}
+// android/build.gradle (root)
 
 buildscript {
-  ext {
-    // These are read by app/build.gradle; adjust if you need specific versions.
-    buildToolsVersion = project.findProperty("android.buildToolsVersion") ?: "34.0.0"
-    minSdkVersion     = Integer.parseInt(project.findProperty("android.minSdkVersion") ?: "24")
-    compileSdkVersion = Integer.parseInt(project.findProperty("android.compileSdkVersion") ?: "34")
-    targetSdkVersion  = Integer.parseInt(project.findProperty("android.targetSdkVersion") ?: "34")
-    kotlinVersion     = project.findProperty("android.kotlinVersion") ?: "1.9.24"
-  }
-
   repositories {
     google()
     mavenCentral()
   }
+}
 
-  dependencies {
-    // AGP + Kotlin toolchains – versions here are safe for RN 0.74 / SDK 54 builds on EAS
-    classpath("com.android.tools.build:gradle:8.6.1")
-    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
-
-    // DO NOT declare com.facebook.react:react-native-gradle-plugin here for RN 0.74+
-    // It is provided via includeBuild(...) in settings.gradle.
-  }
+plugins {
+  id "com.android.application"      version "8.7.2" apply false
+  id "com.android.library"          version "8.7.2" apply false
+  id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+  // DO NOT declare com.facebook.react here on RN 0.74.x
 }
 
 allprojects {
   repositories {
     google()
     mavenCentral()
-    maven { url 'https://www.jitpack.io' }
   }
 }
 
-// Required by Expo projects at the root
-apply plugin: "expo-root-project"
-
-// RN 0.74+ root plugin (settings.gradle already includes the settings plugin)
-plugins {}
+tasks.register("clean", Delete) {
+  delete rootProject.layout.buildDirectory
+}
