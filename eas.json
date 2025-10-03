@@ -6,7 +6,6 @@
   "build": {
     "production": {
       "autoIncrement": true,
-      "autoSubmit": true,
       "android": { "buildType": "app-bundle" },
       "node": "20.19.4",
       "env": {
