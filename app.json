@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "android": {
       "package": "com.lm29ai.lucidly"
+      "extra": { "eas": { "projectId": "PUT-YOUR-UUID-HERE" } }
     }
   }
 }
