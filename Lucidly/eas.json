@@ -6,20 +6,7 @@
   "build": {
     "production": {
       "autoIncrement": true,
-      "android": { "buildType": "app-bundle" },
-      "serviceAccountKeyPath": "./credentials/lucidly-471800-9463c4a94d16",
-      "node": "20.19.4",
-      "env": {
-        "EXPO_ROUTER_APP_ROOT": "app",
-        "EXPO_NO_METRO_WORKSPACE_ROOT": "1",
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
-        "NPM_CONFIG_FUND": "false",
-        "NPM_CONFIG_AUDIT": "false"
-      }
-    },
-    "development": {
-      "distribution": "internal",
-      "developmentClient": false,
+      "autoSubmit": true,
       "android": { "buildType": "app-bundle" },
       "node": "20.19.4",
       "env": {
@@ -29,17 +16,13 @@
         "NPM_CONFIG_FUND": "false",
         "NPM_CONFIG_AUDIT": "false"
       }
-    },
-    "preview": {
-      "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "node": "20.19.4",
-      "env": {
-        "EXPO_ROUTER_APP_ROOT": "app",
-        "EXPO_NO_METRO_WORKSPACE_ROOT": "1",
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
-        "NPM_CONFIG_FUND": "false",
-        "NPM_CONFIG_AUDIT": "false"
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./credentials/lucidly-471800-9463c4a94d16.json",
+        "track": "internal"
       }
     }
   }
