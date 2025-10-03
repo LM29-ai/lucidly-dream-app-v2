@@ -1,17 +1,27 @@
-// app.config.js
-export default {
-  expo: {
-    name: "Lucidly",
-    slug: "lucidly",
-    version: "1.0.0",
+// App.js
+import { StatusBar } from "expo-status-bar";
+import React from "react";
+import { SafeAreaView, View, Text, StyleSheet } from "react-native";
 
-    // Android package (required for EAS GitHub builds)
-    android: {
-      package: "com.lm29ai.lucidly", // <-- change if you use a different app id
-    },
+export default function App() {
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.card}>
+        <Text style={styles.title}>Lucidly</Text>
+        <Text style={styles.subtitle}>It works! 🎉</Text>
+        <Text style={styles.body}>
+          This is a minimal App.js entry. Add your screens or navigation here.
+        </Text>
+      </View>
+      <StatusBar style="auto" />
+    </SafeAreaView>
+  );
+}
 
-    // Optional (kept minimal). Add icons/splash when ready:
-    // icon: "./assets/icon.png",
-    // splash: { image: "./assets/splash.png", resizeMode: "contain", backgroundColor: "#ffffff" },
-  },
-};
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#0f172a", alignItems: "center", justifyContent: "center", padding: 24 },
+  card: { width: "100%", maxWidth: 560, backgroundColor: "#111827", borderRadius: 16, padding: 20, gap: 6 },
+  title: { color: "white", fontSize: 28, fontWeight: "700" },
+  subtitle: { color: "#93c5fd", fontSize: 18, fontWeight: "600" },
+  body: { color: "#d1d5db", fontSize: 15, lineHeight: 20 },
+});
