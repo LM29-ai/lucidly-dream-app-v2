@@ -8,7 +8,7 @@
       "expo-asset"
     ],
     "android": {
-      "package": "com.lucidlyapp.app",
+      "package": "com.lm29ai.lucidly",
       "permissions": [
         "com.android.vending.BILLING"
       ]
