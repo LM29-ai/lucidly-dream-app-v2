@@ -8,7 +8,7 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.title}>Lucidly</Text>
-        <Text style={styles.subtitle}>It works! 🎉</Text>
+        <Text style={styles.subtitle}>It works! </Text>
         <Text style={styles.body}>
           This is a minimal App.js entry. Add your screens or navigation here.
         </Text>
