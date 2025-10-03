@@ -3,6 +3,7 @@
     "name": "Lucidly",
     "slug": "lucidly",
     "scheme": "lucidly",
+    "version": "1.0.0",
     "plugins": [
       "expo-router",
       "expo-asset"
