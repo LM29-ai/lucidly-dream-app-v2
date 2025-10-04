@@ -16,13 +16,29 @@
         "NPM_CONFIG_FUND": "false",
         "NPM_CONFIG_AUDIT": "false"
       }
+    },
+    "development": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "credentialsSource": "remote",
+      "node": "20.19.4"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "credentialsSource": "remote",
+      "node": "20.19.4"
+    },
+    "Lucidly Production": {
+      "extends": "production"
     }
   },
   "submit": {
     "production": {
-      "android": {
-        "track": "internal"
-      }
+      "android": { "track": "internal" }
+    },
+    "Lucidly Production": {
+      "extends": "production"
     }
   }
 }
