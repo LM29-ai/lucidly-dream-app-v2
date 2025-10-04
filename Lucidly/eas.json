@@ -6,6 +6,7 @@
   "build": {
     "production": {
       "autoIncrement": true,
+       "credentialsSource": "remote",
       "android": { "buildType": "app-bundle" },
       "node": "20.19.4",
       "env": {
