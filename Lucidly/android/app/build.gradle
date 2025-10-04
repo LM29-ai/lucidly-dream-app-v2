@@ -16,10 +16,21 @@ android {
     versionCode 1
     versionName "1.0"
   }
+signingConfigs {
+  release {
+    storeFile file("@clutchcode__lucidly-keystore.bak")
+    storePassword "e478c4a4d9a29b3b7a5d57b2fdf7cc04"
+    keyAlias "02a059fe8a7cecf1267605d19ca55bf8"
+    keyPassword "a8e7f336c022d5424c827cdba8d6686d"
+  }
+
+  }
+}
 
   buildTypes {
     release {
       minifyEnabled false
+      signingConfig signingConfigs.release
       proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
     }
   }
