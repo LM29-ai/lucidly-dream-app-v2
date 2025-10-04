@@ -1,13 +1,13 @@
 {
   "cli": {
-    "version": ">= 16.19.3",
+    "version": ">= 3.0.0",
     "appVersionSource": "remote"
   },
   "build": {
     "production": {
       "autoIncrement": true,
       "android": { "buildType": "app-bundle" },
-       "credentialsSource": "remote",
+      "credentialsSource": "remote",
       "node": "20.19.4",
       "env": {
         "EXPO_ROUTER_APP_ROOT": "app",
@@ -21,7 +21,6 @@
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "./credentials/lucidly-471800-9463c4a94d16.json",
         "track": "internal"
       }
     }
