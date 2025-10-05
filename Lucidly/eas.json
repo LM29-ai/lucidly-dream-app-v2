@@ -1,10 +1,11 @@
 {
   "cli": {
-    "version": ">= 3.0.0",
+    "version": ">= 16.19.3",
     "appVersionSource": "remote"
   },
   "build": {
     "production": {
+      "environment": "production",
       "autoIncrement": true,
       "android": { "buildType": "app-bundle" },
       "credentialsSource": "remote",
@@ -17,28 +18,16 @@
         "NPM_CONFIG_AUDIT": "false"
       }
     },
-    "development": {
-      "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "credentialsSource": "remote",
-      "node": "20.19.4"
-    },
-    "preview": {
-      "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "credentialsSource": "remote",
-      "node": "20.19.4"
-    },
     "Lucidly Production": {
       "extends": "production"
     }
   },
   "submit": {
     "production": {
-      "android": { "track": "internal" }
-    },
-    "Lucidly Production": {
-      "extends": "production"
+      "android": {
+        "serviceAccountKeyPath": "./credentials/lucidly-471800-9463c4a94d16.json",
+        "track": "internal"
+      }
     }
   }
 }
