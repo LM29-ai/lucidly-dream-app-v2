@@ -1,4 +1,4 @@
-// android/settings.gradle
+// android/settings.gradle (Groovy)
 
 pluginManagement {
   repositories {
@@ -6,26 +6,18 @@ pluginManagement {
     google()
     mavenCentral()
   }
-
-  // Bring in the React Native Gradle plugin from node_modules (RN 0.74.x)
+  // RN and Expo settings/build plugins
   includeBuild("../node_modules/@react-native/gradle-plugin")
-
-  // Expo settings plugin (optional — only if present)
   includeBuild("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin")
 }
 
 plugins {
-  id("expo-autolinking-settings") apply false
+  // ✅ Use id("…") with quotes — do NOT write bare `com.facebook.react.settings`
+  id("com.facebook.react.settings")
+  id("expo.settings")
 }
 
 rootProject.name = "Lucidly"
-include(":app")
 
-// Try to apply Expo's settings script only if it exists
-def expoSettings = file("../node_modules/expo-modules-autolinking/android/expo-modules-settings.gradle")
-if (expoSettings.exists()) {
-  apply from: expoSettings
-  useExpoModules()
-} else {
-  println("⚠️  Expo autolinking script not found; continuing without Expo modules")
-}
+// Standard app module
+include(":app")
