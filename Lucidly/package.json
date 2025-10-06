@@ -13,7 +13,6 @@
     "typecheck": "tsc --noEmit",
     "postinstall": "node -e \"console.log('[postinstall] noop')\" || true",
     "eas-build-pre-install": "node -e 'const fs=require(\"fs\"),p=require(\"path\");const t=[\"node_modules/react-native/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts\",\"node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts\"];let touched=0;for(const rel of t){const f=p.join(process.cwd(),rel);if(!fs.existsSync(f)) continue;let s=fs.readFileSync(f,\"utf8\");const before=s;s=s.replace(/\\r?\\n\\s*import\\s+org\\\\.gradle\\\\.configurationcache\\\\.extensions\\\\.serviceOf\\s*\\r?\\n/g,\"\\n\");if(!/import\\s+org\\\\.gradle\\\\.kotlin\\\\.dsl\\\\.support\\\\.serviceOf/.test(s)){s=s.replace(/((?:^|\\n)import\\s+[^\\n]+\\n)+/m,(m)=>m+\"import org.gradle.kotlin.dsl.support.serviceOf\\n\");}s=s.replace(/\\bgradle\\.serviceOf</g,\"serviceOf<\");if(s!==before){fs.writeFileSync(f,s,\"utf8\");console.log(\"[patch] fixed:\",rel);touched++;}else{console.log(\"[patch] no changes needed:\",rel);} }if(!touched) console.log(\"[patch] RN gradle-plugin file not found; continuing\");'"
-,
     "patch-package": "^8.0.0"
   },
   "dependencies": {
@@ -44,4 +43,3 @@
     "node": ">=20.17.0"
   }
 }
-
