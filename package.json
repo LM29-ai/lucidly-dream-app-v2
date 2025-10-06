@@ -11,12 +11,13 @@
     "export:embed:android": "expo export:embed --eager --platform android --dev false",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "postinstall": "node scripts/patch-rn-gradle-plugin.js || true"
+    "postinstall": "node scripts/postinstall.js"
 ,
     "patch-package": "^8.0.0"
   },
   "dependencies": {
     "@expo/metro-config": "~54.0.2",
+    "@react-native-async-storage/async-storage": "^1.23.1",
     "expo": "^54.0.0",
     "expo-asset": "~12.0.9",
     "expo-constants": "~18.0.9",
