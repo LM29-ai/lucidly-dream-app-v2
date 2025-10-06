@@ -11,7 +11,7 @@
     "export:embed:android": "expo export:embed --eager --platform android --dev false",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "postinstall": "node -e \"console.log('postinstall noop')\""
+    "postinstall": "node scripts/postinstall.js"
 ,
     "patch-package": "^8.0.0"
   },
