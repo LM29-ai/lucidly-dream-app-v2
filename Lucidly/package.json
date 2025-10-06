@@ -11,8 +11,8 @@
     "export:embed:android": "expo export:embed --eager --platform android --dev false",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "postinstall": "node scripts/patch-rn-gradle-plugin.js",
-    "eas-build-pre-install": "node scripts/patch-rn-gradle-plugin.js"
+    "postinstall": "npm run eas-build-pre-install || true",
+    "eas-build-pre-install": "node -e \"const fs=require('fs'),p=require('path');const cand=['node_modules/react-native/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts','node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts'];let ok=0;for(const rel of cand){const f=p.join(process.cwd(),rel);if(fs.existsSync(f)){let s=fs.readFileSync(f,'utf8');const before=s;s=s.replace(/import\\s+org\\.gradle\\.configurationcache\\.extensions\\.serviceOf\\s*\\r?\\n/g,'');s=s.replace(/import\\s+org\\.gradle\\.kotlin\\.dsl\\.support\\.serviceOf\\s*\\r?\\n/g,'');s=s.replace(/(^|[\\s(=])serviceOf</g,'$1gradle.serviceOf<');if(s!==before){fs.writeFileSync(f,s,'utf8');console.log('[patch] patched:',rel);ok++;}else{console.log('[patch] no changes:',rel);}}}if(!ok)console.log('[patch] plugin file not found; continuing');\""
 ,
     "patch-package": "^8.0.0"
   },
