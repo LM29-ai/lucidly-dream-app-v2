@@ -1,7 +1,6 @@
+// scripts/patch-rn-gradle-plugin.js
 /**
- * No-op RN Gradle plugin patch so postinstall never fails in CI.
- * Replace with a real patch later if you actually need one.
+ * No-op RN Gradle plugin patch so CI never fails here.
+ * Replace with a real patch if you actually need one.
  */
-try {
-  console.log("[postinstall] skip: no RN Gradle plugin patch required");
-} catch {}
+console.log("[postinstall] skip: no RN Gradle plugin patch required");
