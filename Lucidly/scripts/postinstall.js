@@ -1,12 +1,21 @@
-// scripts/postinstall.js
+// scripts/patch-rn-gradle-plugin.js
 const fs = require("fs");
 const path = require("path");
 
-function tryPatch(file) {
+const candidates = [
+  // RN vendored plugin under react-native/node_modules
+  path.join("node_modules","react-native","node_modules","@react-native","gradle-plugin","react-native-gradle-plugin","build.gradle.kts"),
+  // Direct install path (some setups)
+  path.join("node_modules","@react-native","gradle-plugin","react-native-gradle-plugin","build.gradle.kts"),
+];
+
+function patchFile(file) {
   if (!fs.existsSync(file)) return false;
   let src = fs.readFileSync(file, "utf8");
 
-  // 1) Remove the brittle import (if present)
+  const before = src;
+
+  // Drop fragile imports (any location)
   src = src.replace(
     /import\s+org\.gradle\.configurationcache\.extensions\.serviceOf\s*\r?\n/g,
     ""
@@ -16,42 +25,29 @@ function tryPatch(file) {
     ""
   );
 
-  // 2) Replace calls with the stable receiver form
-  //    serviceOf<Foo>()  ->  gradle.serviceOf<Foo>()
-  src = src.replace(/(^|\s)serviceOf</g, "$1gradle.serviceOf<");
+  // Replace bare serviceOf<Foo>() with gradle.serviceOf<Foo>()
+  // (works across Gradle variants)
+  src = src.replace(/(^|[\s(=])serviceOf</g, "$1gradle.serviceOf<");
 
-  fs.writeFileSync(file, src, "utf8");
-  console.log(`[postinstall] patched: ${file}`);
-  return true;
-}
-
-function findCandidates() {
-  const roots = [
-    // react-native vendored plugin path variants
-    path.join("node_modules", "react-native", "node_modules", "@react-native", "gradle-plugin", "react-native-gradle-plugin", "build.gradle.kts"),
-    path.join("node_modules", "@react-native", "gradle-plugin", "react-native-gradle-plugin", "build.gradle.kts"),
-  ];
-  return roots.filter(fs.existsSync);
+  if (src !== before) {
+    fs.writeFileSync(file, src, "utf8");
+    console.log(`[patch-rn-gradle-plugin] patched: ${file}`);
+    return true;
+  } else {
+    console.log(`[patch-rn-gradle-plugin] no changes needed: ${file}`);
+    return false;
+  }
 }
 
 function main() {
-  // Best-effort: allow CI to proceed even if patch-package not present
-  try {
-    require("child_process").spawnSync("npx", ["--yes", "patch-package"], {
-      stdio: "inherit",
-      shell: process.platform === "win32",
-    });
-  } catch {
-    console.log("[postinstall] patch-package not available (ignored)");
+  let touched = 0;
+  for (const f of candidates) {
+    try { if (patchFile(f)) touched++; } catch (e) {
+      console.warn(`[patch-rn-gradle-plugin] failed on ${f}:`, e.message);
+    }
   }
-
-  const files = findCandidates();
-  if (files.length === 0) {
-    console.log("[postinstall] RN gradle-plugin file not found (ok if plugin layout differs).");
-    return;
+  if (!touched) {
+    console.log("[patch-rn-gradle-plugin] plugin file not found (ok if layout differs); continuing.");
   }
-  files.forEach(tryPatch);
-  console.log("[postinstall] done");
 }
-
 main();
