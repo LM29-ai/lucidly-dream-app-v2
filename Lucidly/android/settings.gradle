@@ -1,4 +1,4 @@
-// android/settings.gradle  (Groovy, no BOM)
+// android/settings.gradle  (Groovy, UTF-8 **without BOM**)
 
 pluginManagement {
   repositories {
@@ -6,18 +6,16 @@ pluginManagement {
     google()
     mavenCentral()
   }
-  // React Native & Expo settings plugins come from node_modules
+  // React Native & Expo settings plugins from node_modules
   includeBuild("../node_modules/@react-native/gradle-plugin")
   includeBuild("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin")
 }
 
+// ✅ Use Groovy string syntax (no parentheses) to avoid parser weirdness
 plugins {
-  // ✅ plugin IDs must be inside this block and quoted
-  id("com.facebook.react.settings")
-  id("expo.settings")
+  id 'com.facebook.react.settings'
+  id 'expo.settings'
 }
 
-rootProject.name = "Lucidly"
-
-// App module
-include(":app")
+rootProject.name = 'Lucidly'
+include ':app'
