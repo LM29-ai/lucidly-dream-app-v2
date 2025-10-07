@@ -1,4 +1,4 @@
-// android/settings.gradle  (Groovy, UTF-8 *without BOM*)
+// android/settings.gradle  (Groovy, ASCII quotes, UTF-8 no BOM)
 pluginManagement {
   repositories {
     gradlePluginPortal()
@@ -10,9 +10,9 @@ pluginManagement {
 }
 
 plugins {
-  id 'com.facebook.react.settings'
-  id 'expo.settings'
+  id("com.facebook.react.settings")
+  id("expo.settings")
 }
 
-rootProject.name = 'Lucidly'
-include ':app'
+rootProject.name = "Lucidly"
+include(":app")
