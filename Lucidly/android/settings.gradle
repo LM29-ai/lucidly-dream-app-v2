@@ -1,4 +1,5 @@
-// android/settings.gradle (Groovy, UTF-8 no BOM)
+// android/settings.gradle  (Groovy, UTF-8 *without BOM*, LF line endings)
+
 pluginManagement {
   repositories {
     gradlePluginPortal()
@@ -7,8 +8,10 @@ pluginManagement {
   }
 }
 
+// Pull the official RN & Expo settings from node_modules
 apply from: file("../node_modules/@react-native/gradle-plugin/settings.gradle")
 apply from: file("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin/settings.gradle")
 
 rootProject.name = "Lucidly"
-include ':app'
+include(":app")
+
