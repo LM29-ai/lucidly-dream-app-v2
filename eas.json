@@ -1,8 +1,12 @@
 {
+  "cli": {
+    "version": ">= 16.19.3",
+    "appVersionSource": "remote"
+  },
   "build": {
     "production": {
-      "autoIncrement": true,
       "android": { "buildType": "app-bundle" },
+      "autoIncrement": true,
       "credentialsSource": "remote",
       "node": "20.19.4",
       "env": {
@@ -14,6 +18,48 @@
       },
       "hooks": {
         "postInstall": "node scripts/patch-rn-gradle-plugin.js || true"
+      }
+    },
+    "preview": {
+      "android": { "buildType": "app-bundle" },
+      "distribution": "internal",
+      "channel": "preview",
+      "credentialsSource": "remote",
+      "node": "20.19.4",
+      "env": {
+        "EXPO_ROUTER_APP_ROOT": "app",
+        "EXPO_NO_METRO_WORKSPACE_ROOT": "1",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "NPM_CONFIG_FUND": "false",
+        "NPM_CONFIG_AUDIT": "false"
+      },
+      "hooks": {
+        "postInstall": "node scripts/patch-rn-gradle-plugin.js || true"
+      }
+    },
+    "development": {
+      "android": { "buildType": "apk" },
+      "developmentClient": true,
+      "distribution": "internal",
+      "credentialsSource": "remote",
+      "node": "20.19.4",
+      "env": {
+        "EXPO_ROUTER_APP_ROOT": "app",
+        "EXPO_NO_METRO_WORKSPACE_ROOT": "1",
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "NPM_CONFIG_FUND": "false",
+        "NPM_CONFIG_AUDIT": "false"
+      },
+      "hooks": {
+        "postInstall": "node scripts/patch-rn-gradle-plugin.js || true"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./credentials/lucidly-471800-9463c4a94d16.json",
+        "track": "internal"
       }
     }
   }
