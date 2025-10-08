@@ -11,7 +11,7 @@
     "export:embed:android": "expo export:embed --eager --platform android --dev false",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "eas-build-pre-install": "node -e \"console.log('preinstall ok')\"",
+    "eas-build-pre-install": "echo 'no-op'",
     "eas-build-post-install": "node scripts/patch-rn-gradle-plugin.js || true"
     ,
     "patch-package": "^8.0.0"
