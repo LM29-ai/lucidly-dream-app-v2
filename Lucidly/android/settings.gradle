@@ -1,4 +1,4 @@
-// android/settings.gradle  (Groovy, UTF-8 *without BOM*, LF line endings)
+// android/settings.gradle  (Groovy, UTF-8 no BOM, LF line endings)
 
 pluginManagement {
   repositories {
@@ -6,12 +6,16 @@ pluginManagement {
     google()
     mavenCentral()
   }
+  // Make RN/Expo settings plugins available to this build
+  includeBuild("../node_modules/@react-native/gradle-plugin")
+  includeBuild("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin")
 }
 
-// Pull the official RN & Expo settings from node_modules
-apply from: file("../node_modules/@react-native/gradle-plugin/settings.gradle")
-apply from: file("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin/settings.gradle")
+plugins {
+  // Use *simple Groovy syntax* to avoid any parsing surprises
+  id 'com.facebook.react.settings'
+  id 'expo.settings'
+}
 
-rootProject.name = "Lucidly"
-include(":app")
-
+rootProject.name = 'Lucidly'
+include ':app'
