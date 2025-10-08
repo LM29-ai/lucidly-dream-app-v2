@@ -1,69 +1,56 @@
 // scripts/patch-rn-gradle-plugin.js
-// Robustly fix wrong 'serviceOf' import/usages inside RN's gradle plugin.
-// Safe to run multiple times.
+// Fix RN Gradle plugin import: use org.gradle.kotlin.dsl.support.serviceOf
 
 const fs = require('fs');
 const path = require('path');
 
-const root = process.cwd();
-let fixed = 0;
-let scanned = 0;
+const candidates = [
+  // RN often nests the plugin under react-native/node_modules
+  'node_modules/react-native/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts',
+  // sometimes it’s installed top-level
+  'node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts',
+];
 
-function fixFile(file) {
+let fixedAny = false;
+
+for (const rel of candidates) {
+  const file = path.join(process.cwd(), rel);
+  if (!fs.existsSync(file)) continue;
+
   let src = fs.readFileSync(file, 'utf8');
   const before = src;
 
-  // Remove the WRONG import if present
-  // import org.gradle.configurationcache.extensions.serviceOf
+  // 1) Drop the wrong import if present
   src = src.replace(
-    /\r?\n\s*import\s+org\.gradle\.configurationcache\.extensions\.serviceOf\s*\r?\n/g,
+    /\n\s*import\s+org\.gradle\.configurationcache\.extensions\.serviceOf\s*\r?\n/g,
     '\n'
   );
 
-  // Ensure the CORRECT import is present
+  // 2) Ensure the correct import exists after other imports
   if (!/import\s+org\.gradle\.kotlin\.dsl\.support\.serviceOf/.test(src)) {
-    // insert after the import block (after any consecutive import lines)
+    // insert after the last import line
     src = src.replace(
-      /((?:^|\n)\s*import[^\n]*\n)+/m,
+      /(import[^\n]*\n)(?!.*\bimport\b)/s, // after the last import
       (m) => m + 'import org.gradle.kotlin.dsl.support.serviceOf\n'
     );
+    // If there were no imports, prepend
+    if (!/import\s/.test(before)) {
+      src = 'import org.gradle.kotlin.dsl.support.serviceOf\n' + src;
+    }
   }
 
-  // Normalize calls: gradle.serviceOf<T>() -> serviceOf<T>()
+  // 3) Normalize calls like gradle.serviceOf<...>() -> serviceOf<...>()
   src = src.replace(/\bgradle\.serviceOf</g, 'serviceOf<');
 
   if (src !== before) {
     fs.writeFileSync(file, src, 'utf8');
-    fixed++;
-    console.log('[patch] repaired:', path.relative(root, file));
+    console.log('[patch] fixed serviceOf imports/calls in', rel);
+    fixedAny = true;
   } else {
-    console.log('[patch] no changes needed:', path.relative(root, file));
+    console.log('[patch] no changes needed for', rel);
   }
 }
 
-function walk(dir) {
-  for (const name of fs.readdirSync(dir)) {
-    const full = path.join(dir, name);
-    const stat = fs.statSync(full);
-    if (stat.isDirectory()) {
-      walk(full);
-    } else if (name === 'build.gradle.kts' && full.includes('@react-native/gradle-plugin')) {
-      scanned++;
-      fixFile(full);
-    }
-  }
+if (!fixedAny) {
+  console.log('[patch] RN Gradle plugin file not found in known locations; continuing');
 }
-
-// Search under node_modules only (fast & sufficient)
-const nm = path.join(root, 'node_modules');
-if (fs.existsSync(nm)) {
-  walk(nm);
-} else {
-  console.log('[patch] node_modules not found, nothing to do (this is okay before install in some flows).');
-}
-
-if (scanned === 0) {
-  console.log('[patch] did not find any RN gradle-plugin build.gradle.kts files.');
-}
-
-console.log(`[patch] scanned: ${scanned}, fixed: ${fixed}`);
