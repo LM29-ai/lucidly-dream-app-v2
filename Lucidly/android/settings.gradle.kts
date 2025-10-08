@@ -1,0 +1,19 @@
+// android/settings.gradle.kts  (UTF-8, no BOM, LF)
+
+pluginManagement {
+  repositories {
+    gradlePluginPortal()
+    google()
+    mavenCentral()
+  }
+  includeBuild("../node_modules/@react-native/gradle-plugin")
+  includeBuild("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin")
+}
+
+plugins {
+  id("com.facebook.react.settings")
+  id("expo.settings")
+}
+
+rootProject.name = "Lucidly"
+include(":app")
