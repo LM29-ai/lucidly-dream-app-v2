@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "eas-build-post-install": "set -eu; for F in node_modules/react-native/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts; do if [ -f \"$F\" ]; then sed -i \"/org\\\\.gradle\\\\.configurationcache\\\\.extensions\\\\.serviceOf/d\" \"$F\"; grep -q \"org.gradle.kotlin.dsl.support.serviceOf\" \"$F\" || sed -i '1s;^;import org.gradle.kotlin.dsl.support.serviceOf\\n;' \"$F\"; sed -i 's/gradle\\\\.serviceOf</serviceOf</g' \"$F\"; fi; done; echo '[patch] RN gradle-plugin patched if present.'",
-    "eas-build-pre-install": "node scripts/prepare-android-settings.js"
+    "eas-build-pre-install": "node -e \"const fs=require('fs'),p=require('path');const g=p.join('android','settings.gradle');if(fs.existsSync(g)){fs.unlinkSync(g);console.log('[prepare] removed android/settings.gradle')}else{console.log('[prepare] no Groovy present')}const k=p.join('android','settings.gradle.kts');if(fs.existsSync(k)){console.log('[prepare] using settings.gradle.kts')}else{console.log('[prepare] WARNING: settings.gradle.kts missing')}\""
 ,
     "patch-package": "^8.0.0"
   },
