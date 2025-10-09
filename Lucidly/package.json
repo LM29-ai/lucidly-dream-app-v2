@@ -11,7 +11,7 @@
     "export:embed:android": "expo export:embed --eager --platform android --dev false",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "eas-build-pre-install": "set -e; echo '[patch] checking RN gradle plugin...'; FILE1=node_modules/react-native/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts; FILE2=node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts; for F in \"$FILE1\" \"$FILE2\"; do if [ -f \"$F\" ]; then echo \"[patch] -> $F\"; # drop wrong import if present; sed -i '/org\\.gradle\\.configurationcache\\.extensions\\.serviceOf/d' \"$F\"; # ensure correct import exists; grep -q 'org.gradle.kotlin.dsl.support.serviceOf' \"$F\" || sed -i '1s;^;import org.gradle.kotlin.dsl.support.serviceOf\\n;' \"$F\"; # normalize call form; sed -i 's/gradle\\.serviceOf</serviceOf</g' \"$F\"; fi; done; echo '[patch] done.'",
+    "eas-build-pre-install": "set -eu; echo '[patch] checking RN gradle plugin...'; for F in node_modules/react-native/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts; do if [ -f \"$F\" ]; then echo \"[patch] -> $F\"; sed -i '/org\\.gradle\\.configurationcache\\.extensions\\.serviceOf/d' \"$F\"; grep -q 'org.gradle.kotlin.dsl.support.serviceOf' \"$F\" || sed -i '1s;^;import org.gradle.kotlin.dsl.support.serviceOf\\n;' \"$F\"; sed -i 's/gradle\\.serviceOf</serviceOf</g' \"$F\"; fi; done; echo '[patch] done.'",
     "eas-build-post-install": "node scripts/patch-rn-gradle-plugin.js || true"
     ,
     "patch-package": "^8.0.0"
