@@ -1,4 +1,4 @@
-// android/settings.gradle.kts  (UTF-8, no BOM, LF)
+// android/settings.gradle.kts  (Kotlin DSL)
 
 pluginManagement {
   repositories {
@@ -6,6 +6,7 @@ pluginManagement {
     google()
     mavenCentral()
   }
+  // React Native & Expo settings plugins from node_modules
   includeBuild("../node_modules/@react-native/gradle-plugin")
   includeBuild("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin")
 }
@@ -16,4 +17,6 @@ plugins {
 }
 
 rootProject.name = "Lucidly"
+
+// App module
 include(":app")
