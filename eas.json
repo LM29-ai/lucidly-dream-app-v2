@@ -15,9 +15,6 @@
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
         "NPM_CONFIG_FUND": "false",
         "NPM_CONFIG_AUDIT": "false"
-      },
-      "hooks": {
-        "postInstall": "node scripts/patch-rn-gradle-plugin.js || true"
       }
     },
     "preview": {
@@ -32,9 +29,6 @@
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
         "NPM_CONFIG_FUND": "false",
         "NPM_CONFIG_AUDIT": "false"
-      },
-      "hooks": {
-        "postInstall": "node scripts/patch-rn-gradle-plugin.js || true"
       }
     },
     "development": {
@@ -49,9 +43,6 @@
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
         "NPM_CONFIG_FUND": "false",
         "NPM_CONFIG_AUDIT": "false"
-      },
-      "hooks": {
-        "postInstall": "node scripts/patch-rn-gradle-plugin.js || true"
       }
     }
   },
