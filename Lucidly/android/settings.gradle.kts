@@ -6,7 +6,6 @@ pluginManagement {
     google()
     mavenCentral()
   }
-  // Settings plugins from node_modules
   includeBuild("../node_modules/@react-native/gradle-plugin")
   includeBuild("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin")
 }
