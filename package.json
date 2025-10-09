@@ -11,7 +11,7 @@
     "export:embed:android": "expo export:embed --eager --platform android --dev false",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "eas-build-post-install": "node scripts/patch-rn-gradle-plugin.js || true",
+    "eas-build-post-install": "set -eu; for F in node_modules/react-native/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts; do if [ -f \"$F\" ]; then sed -i \"/org\\\\.gradle\\\\.configurationcache\\\\.extensions\\\\.serviceOf/d\" \"$F\"; grep -q \"org.gradle.kotlin.dsl.support.serviceOf\" \"$F\" || sed -i '1s;^;import org.gradle.kotlin.dsl.support.serviceOf\\n;' \"$F\"; sed -i 's/gradle\\\\.serviceOf</serviceOf</g' \"$F\"; fi; done; echo '[patch] RN gradle-plugin patched if present.'",
     "eas-build-pre-install": "set -eu; echo '[patch] checking RN gradle plugin...'; for F in node_modules/react-native/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts; do if [ -f \"$F\" ]; then echo \"[patch] -> $F\"; sed -i '/org\\.gradle\\.configurationcache\\.extensions\\.serviceOf/d' \"$F\"; grep -q 'org.gradle.kotlin.dsl.support.serviceOf' \"$F\" || sed -i '1s;^;import org.gradle.kotlin.dsl.support.serviceOf\\n;' \"$F\"; sed -i 's/gradle\\.serviceOf</serviceOf</g' \"$F\"; fi; done; echo '[patch] done.'"
 ,
     "patch-package": "^8.0.0"
@@ -30,8 +30,7 @@
     "react-native": "^0.74.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.16.0",
-    "@react-native/gradle-plugin": "0.73.2"
+    "react-native-screens": "~4.16.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
