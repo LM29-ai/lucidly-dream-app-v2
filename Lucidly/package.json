@@ -42,10 +42,6 @@
     "typescript": "^5.4.0"
   },
 
-  "overrides": {
-    "@react-native/gradle-plugin": "0.73.2"
-  },
-  
   "engines": {
     "node": ">=20.17.0"
   }
