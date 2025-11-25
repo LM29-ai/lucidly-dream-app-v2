@@ -1,0 +1,2 @@
+[tool.mise]
+python = "3.10.12"
