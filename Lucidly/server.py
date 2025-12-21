@@ -28,6 +28,12 @@ user_sessions = {}
 def root():
     return {"message": "Lucidly API is running!", "status": "ok"}
 
+app = FastAPI()
+
+@app.get("/api/health")
+def healthcheck():
+    return {"ok": True}
+
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
