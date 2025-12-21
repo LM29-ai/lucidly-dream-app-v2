@@ -1,22 +1,26 @@
 // app.config.js
-export default {
-  expo: {
-    name: "Lucidly",
-    slug: "lucidly",
-    version: "1.0.0",
+const { withSettingsGradle } = require("@expo/config-plugins");
 
-    // Android package (required for EAS GitHub builds)
-    android: {
-      package: "com.lm29ai.lucidly",
-    },
+module.exports = (config) => {
+  return withSettingsGradle(config, (mod) => {
+    const c = mod.modResults.contents;
 
-    // Link this repo to your EAS project
-    extra: {
-      eas: { projectId: "a38e5048-5154-4fe9-ac8c-a58e3cd72b61" },
-    },
+    // Fix the common broken output where plugin IDs appear as bare symbols:
+    // plugins { com.facebook.react.settings  expo.settings }
+    mod.modResults.contents = c
+      .replace(/plugins\s*\{\s*com\.facebook\.react\.settings/g, 'plugins {\n  id("com.facebook.react.settings")')
+      .replace(/^\s*com\.facebook\.react\.settings\s*$/gm, 'id("com.facebook.react.settings")')
+      .replace(/^\s*expo\.settings\s*$/gm, 'id("expo.settings")');
 
-    // Optional assets:
-    // icon: "./assets/icon.png",
-    // splash: { image: "./assets/splash.png", resizeMode: "contain", backgroundColor: "#ffffff" },
-  },
+    // Also ensure expo.settings line is properly wrapped if it appears in plugins {}
+    if (mod.modResults.contents.includes("id(\"com.facebook.react.settings\")") &&
+        !mod.modResults.contents.includes("id(\"expo.settings\")")) {
+      mod.modResults.contents = mod.modResults.contents.replace(
+        /id\("com\.facebook\.react\.settings"\)\s*\n?\}/,
+        'id("com.facebook.react.settings")\n  id("expo.settings")\n}'
+      );
+    }
+
+    return mod;
+  });
 };
