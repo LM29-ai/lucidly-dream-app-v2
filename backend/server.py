@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
+from fastapi import HTTPException
 from datetime import datetime
 import os
 import uvicorn
@@ -148,16 +149,15 @@ def reset_user_tokens(current_user=Depends(get_current_user)):
 # Dreams Endpoints
 # -----------------------------
 @app.get("/api/dreams")
-def get_dreams(current_user=Depends(get_current_user)):
+def get_dreams(current_user = Depends(get_current_user)):
     if not current_user:
-        return []
+        raise HTTPException(status_code=401, detail="Authentication required")
     return [d for d in dreams_db.values() if d.get("user_id") == current_user["id"]]
 
-
 @app.post("/api/dreams")
-def create_dream(dream_data: dict, current_user=Depends(get_current_user)):
+def create_dream(dream_data: dict, current_user = Depends(get_current_user)):
     if not current_user:
-        return {"error": "Authentication required"}
+        raise HTTPException(status_code=401, detail="Authentication required")
 
     dream_id = f"dream_{len(dreams_db) + 1}"
     dream = {
