@@ -1,15 +1,44 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
-from fastapi import HTTPException
 from datetime import datetime
 import os
 import uvicorn
+from typing import Dict, Any
+
+from pymongo import MongoClient
+from bson import ObjectId
+
+
+# -----------------------------
+# Helpers
+# -----------------------------
+def now_iso() -> str:
+    return datetime.utcnow().isoformat() + "Z"
+
+
+def normalize_email(email: str) -> str:
+    return (email or "").strip().lower()
+
+
+def make_token(user_id: str) -> str:
+    # Simple token for now. Replace with JWT later.
+    return f"token_{user_id}"
+
+
+def objid_to_str(doc: Dict[str, Any]) -> Dict[str, Any]:
+    if doc is None:
+        return doc
+    if "_id" in doc:
+        doc["id"] = str(doc["_id"])
+        del doc["_id"]
+    return doc
+
 
 # -----------------------------
 # App + Middleware
 # -----------------------------
-app = FastAPI(title="Lucidly API")
+app = FastAPI(title="Lucidly API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,31 +48,82 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -----------------------------
-# Auth / Security (simple)
-# -----------------------------
 security = HTTPBearer(auto_error=False)
 
-# In-memory storage (swap with Mongo later)
-users_db = {}        # key: email -> user profile
-dreams_db = {}       # key: dream_id -> dream
-user_sessions = {}   # key: token -> user profile
+
+# -----------------------------
+# Mongo Connection
+# -----------------------------
+# Primary: MONGO_URL (your Railway var)
+# Fallbacks included to prevent future confusion
+MONGO_URL = (
+    os.getenv("MONGO_URL")
+    or os.getenv("MONGODB_URI")
+    or os.getenv("MONGO_URI")
+    or os.getenv("DATABASE_URL")
+)
+
+mongo_client = None
+db = None
+
+if MONGO_URL:
+    mongo_client = MongoClient(MONGO_URL)
+    db_name = os.getenv("MONGODB_DB") or "lucidly"
+    db = mongo_client[db_name]
+
+    users_col = db["users"]
+    dreams_col = db["dreams"]
+    sessions_col = db["sessions"]
+else:
+    users_col = None
+    dreams_col = None
+    sessions_col = None
 
 
-def now_iso() -> str:
-    return datetime.now().isoformat()
+def require_mongo():
+    if db is None:
+        raise HTTPException(
+            status_code=500,
+            detail="MongoDB is not configured. Set MONGO_URL (and optionally MONGODB_DB).",
+        )
 
 
-def make_token(user_id: str) -> str:
-    return f"token_{user_id}"
-
-
+# -----------------------------
+# Auth
+# -----------------------------
 def get_current_user(token_data=Depends(security)):
-    """Return the user profile from the session token, or None."""
+    """
+    Reads bearer token and returns the user document (from Mongo).
+    Returns None if missing/invalid.
+    """
     if not token_data:
         return None
+
     token = token_data.credentials
-    return user_sessions.get(token)
+    if not token:
+        return None
+
+    require_mongo()
+
+    session = sessions_col.find_one({"token": token})
+    if not session:
+        return None
+
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+
+    user = users_col.find_one({"user_id": user_id})
+    if not user:
+        return None
+
+    return objid_to_str(user)
+
+
+def require_user(current_user=Depends(get_current_user)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return current_user
 
 
 # -----------------------------
@@ -56,26 +136,34 @@ def root():
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "healthy", "timestamp": now_iso()}
+    return {
+        "status": "healthy",
+        "timestamp": now_iso(),
+        "mongo_configured": bool(MONGO_URL),
+        "db_name": (db.name if db else None),
+    }
 
 
 # -----------------------------
-# Auth Endpoints
+# Auth Endpoints (Mongo-backed)
 # -----------------------------
 @app.post("/api/auth/register")
 def register(user_data: dict):
-    email = (user_data.get("email") or "").strip().lower()
+    require_mongo()
+
+    email = normalize_email(user_data.get("email", ""))
     name = (user_data.get("name") or "").strip()
 
     if not email:
-        return {"error": "Email is required"}
+        raise HTTPException(status_code=400, detail="Email is required")
 
-    if email in users_db:
-        return {"error": "Email already registered"}
+    existing = users_col.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=409, detail="Email already registered")
 
-    user_id = f"user_{len(users_db) + 1}"
+    user_id = f"user_{int(datetime.utcnow().timestamp())}"
     user_profile = {
-        "id": user_id,
+        "user_id": user_id,
         "name": name,
         "email": email,
         "is_premium": False,
@@ -87,82 +175,95 @@ def register(user_data: dict):
         "video_tokens_used": 0,
         "video_tokens_limit": 3,
         "generation_count": 0,
+        "created_at": now_iso(),
     }
 
-    users_db[email] = user_profile
-    token = make_token(user_id)
-    user_sessions[token] = user_profile
+    users_col.insert_one(user_profile)
 
-    return {"token": token, "token_type": "bearer", "user": user_profile}
+    token = make_token(user_id)
+    sessions_col.insert_one({"token": token, "user_id": user_id, "created_at": now_iso()})
+
+    saved_user = users_col.find_one({"email": email})
+    return {"token": token, "token_type": "bearer", "user": objid_to_str(saved_user)}
 
 
 @app.post("/api/auth/login")
 def login(credentials: dict):
-    email = (credentials.get("email") or "").strip().lower()
+    require_mongo()
 
+    email = normalize_email(credentials.get("email", ""))
     if not email:
-        return {"error": "Email is required"}
+        raise HTTPException(status_code=400, detail="Email is required")
 
-    user = users_db.get(email)
+    user = users_col.find_one({"email": email})
     if not user:
-        return {"error": "User not found"}
+        raise HTTPException(status_code=404, detail="User not found")
 
-    token = make_token(user["id"])
-    user_sessions[token] = user
-    return {"token": token, "token_type": "bearer", "user": user}
+    token = make_token(user["user_id"])
+
+    sessions_col.update_one(
+        {"token": token},
+        {
+            "$set": {"token": token, "user_id": user["user_id"], "updated_at": now_iso()},
+            "$setOnInsert": {"created_at": now_iso()},
+        },
+        upsert=True,
+    )
+
+    return {"token": token, "token_type": "bearer", "user": objid_to_str(user)}
+
+
+@app.post("/api/auth/logout")
+def logout(token_data=Depends(security)):
+    """
+    Server-side logout. Frontend MUST still delete its local token.
+    """
+    require_mongo()
+
+    if not token_data or not token_data.credentials:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    token = token_data.credentials
+    sessions_col.delete_many({"token": token})
+    return {"ok": True}
 
 
 @app.get("/api/auth/me")
-def get_me(current_user=Depends(get_current_user)):
-    if not current_user:
-        return {"error": "Not authenticated"}
+def get_me(current_user=Depends(require_user)):
     return current_user
 
 
 @app.post("/api/auth/reset-tokens")
-def reset_user_tokens(current_user=Depends(get_current_user)):
-    if not current_user:
-        return {"error": "Authentication required"}
+def reset_user_tokens(current_user=Depends(require_user)):
+    require_mongo()
 
-    email = current_user.get("email")
-    if email and email in users_db:
-        users_db[email]["image_tokens_used"] = 0
-        users_db[email]["video_tokens_used"] = 0
-        users_db[email]["lucy_tokens_used"] = 0
-
-        # also update session token copy (if present)
-        token = make_token(current_user["id"])
-        if token in user_sessions:
-            user_sessions[token]["image_tokens_used"] = 0
-            user_sessions[token]["video_tokens_used"] = 0
-            user_sessions[token]["lucy_tokens_used"] = 0
-
+    users_col.update_one(
+        {"email": current_user["email"]},
+        {"$set": {"image_tokens_used": 0, "video_tokens_used": 0, "lucy_tokens_used": 0, "updated_at": now_iso()}},
+    )
+    updated = users_col.find_one({"email": current_user["email"]})
     return {
-        "message": "All tokens reset successfully! You now have 3 free uses of each AI feature.",
-        "image_tokens_remaining": 3,
-        "video_tokens_remaining": 3,
-        "lucy_tokens_remaining": 3,
+        "message": "All tokens reset successfully!",
+        "user": objid_to_str(updated),
     }
 
 
 # -----------------------------
-# Dreams Endpoints
+# Dreams (Mongo-backed + protected)
 # -----------------------------
 @app.get("/api/dreams")
-def get_dreams(current_user = Depends(get_current_user)):
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    return [d for d in dreams_db.values() if d.get("user_id") == current_user["id"]]
+def get_dreams(current_user=Depends(require_user)):
+    require_mongo()
+    user_id = current_user["user_id"]
+    docs = list(dreams_col.find({"user_id": user_id}).sort("created_at", -1))
+    return [objid_to_str(d) for d in docs]
+
 
 @app.post("/api/dreams")
-def create_dream(dream_data: dict, current_user = Depends(get_current_user)):
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
-    dream_id = f"dream_{len(dreams_db) + 1}"
+def create_dream(dream_data: dict, current_user=Depends(require_user)):
+    require_mongo()
     dream = {
-        "id": dream_id,
-        "user_id": current_user["id"],
+        "user_id": current_user["user_id"],
         "content": dream_data.get("content", ""),
         "mood": dream_data.get("mood", "peaceful"),
         "tags": dream_data.get("tags", []),
@@ -176,242 +277,112 @@ def create_dream(dream_data: dict, current_user = Depends(get_current_user)):
         "video_base64": None,
         "is_public": False,
     }
-
-    dreams_db[dream_id] = dream
-    return dream
+    res = dreams_col.insert_one(dream)
+    saved = dreams_col.find_one({"_id": res.inserted_id})
+    return objid_to_str(saved)
 
 
 @app.get("/api/dreams/{dream_id}")
-def get_dream(dream_id: str):
-    dream = dreams_db.get(dream_id)
-    if not dream:
-        return {"error": "Dream not found"}
+def get_dream(dream_id: str, current_user=Depends(require_user)):
+    require_mongo()
 
-    # Ensure required fields exist
-    dream.setdefault("ai_image", None)
-    dream.setdefault("ai_video", None)
-    dream.setdefault("ai_interpretation", None)
-    dream.setdefault("tags", [])
-    return dream
+    try:
+        oid = ObjectId(dream_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid dream id")
+
+    doc = dreams_col.find_one({"_id": oid, "user_id": current_user["user_id"]})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dream not found")
+    return objid_to_str(doc)
 
 
 # -----------------------------
-# AI Image Generation (mock)
+# AI Endpoints (mock but functional + protected)
 # -----------------------------
 @app.post("/api/dreams/{dream_id}/generate-image")
-def generate_dream_image(dream_id: str, image_data: dict, current_user=Depends(get_current_user)):
-    if not current_user:
-        return {"error": "Authentication required"}
+def generate_dream_image(dream_id: str, payload: dict, current_user=Depends(require_user)):
+    require_mongo()
 
-    dream = dreams_db.get(dream_id)
-    if not dream or dream.get("user_id") != current_user["id"]:
-        return {"error": "Dream not found"}
+    try:
+        oid = ObjectId(dream_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid dream id")
 
-    # Enforce limits
-    if (not current_user.get("is_premium", False)
-        and current_user.get("image_tokens_used", 0) >= current_user.get("image_tokens_limit", 3)):
-        return {
-            "error": "Image generation limit reached",
-            "message": f"You've used all {current_user.get('image_tokens_limit', 3)} free image generations. Upgrade to premium!",
-        }
+    dream = dreams_col.find_one({"_id": oid, "user_id": current_user["user_id"]})
+    if not dream:
+        raise HTTPException(status_code=404, detail="Dream not found")
 
-    # Mock image data
-    mock_image = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM2MzY2ZjEiLz48c3RvcCBvZmZzZXQ9IjMzJSIgc3RvcC1jb2xvcj0iIzhhNWNmNiIvPjxzdG9wIG9mZnNldD0iNjYlIiBzdG9wLWNvbG9yPSIjYTg1NWY3Ii8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZWM0ODk5Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNDAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC13ZWlnaHQ9ImJvbGQiPkFJIEdlbmVyYXRlZCBJbWFnZTwvdGV4dD48dGV4dCB4PSI1MCUiIHk9IjYwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkZyb20geW91ciBkcmVhbSBhYm91dCBbZHJlYW1dPC90ZXh0Pjwvc3ZnPg=="
+    if not current_user.get("is_premium", False) and current_user.get("image_tokens_used", 0) >= current_user.get("image_tokens_limit", 3):
+        raise HTTPException(status_code=402, detail="Image generation limit reached (upgrade required)")
 
-    dreams_db[dream_id]["ai_image"] = mock_image
-    dreams_db[dream_id]["is_public"] = True
+    mock_image = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TW9jayBBSSBJbWFnZTwvdGV4dD48L3N2Zz4="
 
+    dreams_col.update_one({"_id": oid}, {"$set": {"ai_image": mock_image, "is_public": True, "updated_at": now_iso()}})
     if not current_user.get("is_premium", False):
-        email = current_user.get("email")
-        if email in users_db:
-            new_used = current_user.get("image_tokens_used", 0) + 1
-            users_db[email]["image_tokens_used"] = new_used
+        users_col.update_one({"email": current_user["email"]}, {"$inc": {"image_tokens_used": 1}})
 
-            token = make_token(current_user["id"])
-            if token in user_sessions:
-                user_sessions[token]["image_tokens_used"] = new_used
-
-    remaining = max(0, current_user.get("image_tokens_limit", 3) - current_user.get("image_tokens_used", 0) - 1)
-    return {
-        "message": "Image generated successfully!",
-        "image_url": mock_image,
-        "image_data": mock_image,
-        "image_base64": mock_image,
-        "task_id": f"img_task_{dream_id}",
-        "tokens_remaining": remaining,
-    }
+    return {"ok": True, "image": mock_image}
 
 
-# -----------------------------
-# AI Video Generation (mock)
-# -----------------------------
 @app.post("/api/dreams/{dream_id}/generate-video")
-def generate_dream_video(dream_id: str, video_data: dict, current_user=Depends(get_current_user)):
-    if not current_user:
-        return {"error": "Authentication required"}
+def generate_dream_video(dream_id: str, payload: dict, current_user=Depends(require_user)):
+    require_mongo()
 
-    dream = dreams_db.get(dream_id)
-    if not dream or dream.get("user_id") != current_user["id"]:
-        return {"error": "Dream not found"}
+    try:
+        oid = ObjectId(dream_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid dream id")
 
-    if (not current_user.get("is_premium", False)
-        and current_user.get("video_tokens_used", 0) >= current_user.get("video_tokens_limit", 3)):
-        return {
-            "error": "Video generation limit reached",
-            "message": f"You've used all {current_user.get('video_tokens_limit', 3)} free video generations. Upgrade to premium!",
-        }
+    dream = dreams_col.find_one({"_id": oid, "user_id": current_user["user_id"]})
+    if not dream:
+        raise HTTPException(status_code=404, detail="Dream not found")
+
+    if not current_user.get("is_premium", False) and current_user.get("video_tokens_used", 0) >= current_user.get("video_tokens_limit", 3):
+        raise HTTPException(status_code=402, detail="Video generation limit reached (upgrade required)")
 
     sample_url = "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4"
-    dreams_db[dream_id]["ai_video"] = sample_url
-    dreams_db[dream_id]["video_base64"] = "sample_video_data"
-    dreams_db[dream_id]["is_public"] = True
-
+    dreams_col.update_one({"_id": oid}, {"$set": {"ai_video": sample_url, "is_public": True, "updated_at": now_iso()}})
     if not current_user.get("is_premium", False):
-        email = current_user.get("email")
-        if email in users_db:
-            new_used = current_user.get("video_tokens_used", 0) + 1
-            users_db[email]["video_tokens_used"] = new_used
+        users_col.update_one({"email": current_user["email"]}, {"$inc": {"video_tokens_used": 1}})
 
-            token = make_token(current_user["id"])
-            if token in user_sessions:
-                user_sessions[token]["video_tokens_used"] = new_used
-
-    remaining = max(0, current_user.get("video_tokens_limit", 3) - current_user.get("video_tokens_used", 0) - 1)
-    return {
-        "message": "Video generation started successfully!",
-        "task_id": f"vid_task_{dream_id}",
-        "estimated_time": "60-120 seconds",
-        "video_url": sample_url,
-        "tokens_remaining": remaining,
-    }
+    return {"ok": True, "video_url": sample_url}
 
 
-@app.get("/api/dreams/{dream_id}/video-status")
-def get_video_status(dream_id: str):
-    return {
-        "status": "completed",
-        "video_url": "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
-        "progress": "100%",
-    }
-
-
-# -----------------------------
-# Lucy AI (mock)
-# -----------------------------
 @app.post("/api/dreams/{dream_id}/lucy-interpretation")
-def get_lucy_interpretation(dream_id: str, request_data: dict, current_user=Depends(get_current_user)):
-    if not current_user:
-        return {"error": "Authentication required"}
+def get_lucy_interpretation(dream_id: str, payload: dict, current_user=Depends(require_user)):
+    require_mongo()
 
-    dream = dreams_db.get(dream_id)
-    if not dream or dream.get("user_id") != current_user["id"]:
-        return {"error": "Dream not found"}
+    try:
+        oid = ObjectId(dream_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid dream id")
 
-    if (not current_user.get("is_premium", False)
-        and current_user.get("lucy_tokens_used", 0) >= current_user.get("lucy_tokens_limit", 3)):
-        return {
-            "error": "Lucy interpretation limit reached",
-            "message": f"You've used all {current_user.get('lucy_tokens_limit', 3)} free Lucy interpretations. Upgrade to premium!",
-        }
+    dream = dreams_col.find_one({"_id": oid, "user_id": current_user["user_id"]})
+    if not dream:
+        raise HTTPException(status_code=404, detail="Dream not found")
 
-    interpretation = f"""Hello {current_user.get('name', 'dreamer')}! ✨
+    if not current_user.get("is_premium", False) and current_user.get("lucy_tokens_used", 0) >= current_user.get("lucy_tokens_limit", 3):
+        raise HTTPException(status_code=402, detail="Lucy interpretation limit reached (upgrade required)")
 
-I've analyzed your dream: "{dream.get('content', 'your beautiful dream')[:50]}..."
+    interpretation = (
+        f"Hello {current_user.get('name','dreamer')}! ✨\n\n"
+        f"I analyzed your dream: \"{(dream.get('content') or '')[:80]}...\"\n\n"
+        f"Symbolic Meaning: transformation and personal growth.\n"
+        f"Emotional Insights: mood = {dream.get('mood','peaceful')}.\n"
+        f"Lucy’s Wisdom: trust your intuition.\n"
+    )
 
-🌙 Symbolic Meaning: Your dream reflects transformation and personal growth.
-💫 Emotional Insights: The {dream.get('mood', 'peaceful')} mood indicates inner balance.
-✨ Lucy's Wisdom: Trust your intuition, {current_user.get('name', 'dear dreamer')}!
-
-Sweet dreams! - Lucy ✨
-"""
-
-    dreams_db[dream_id]["ai_interpretation"] = interpretation
-
+    dreams_col.update_one({"_id": oid}, {"$set": {"ai_interpretation": interpretation, "updated_at": now_iso()}})
     if not current_user.get("is_premium", False):
-        email = current_user.get("email")
-        if email in users_db:
-            new_used = current_user.get("lucy_tokens_used", 0) + 1
-            users_db[email]["lucy_tokens_used"] = new_used
+        users_col.update_one({"email": current_user["email"]}, {"$inc": {"lucy_tokens_used": 1}})
 
-            token = make_token(current_user["id"])
-            if token in user_sessions:
-                user_sessions[token]["lucy_tokens_used"] = new_used
-
-    remaining = max(0, current_user.get("lucy_tokens_limit", 3) - current_user.get("lucy_tokens_used", 0) - 1)
-    return {"dream_id": dream_id, "interpretation": interpretation, "cached": False, "tokens_remaining": remaining}
+    return {"ok": True, "interpretation": interpretation}
 
 
 # -----------------------------
-# Dashboard / Gallery / Misc
-# -----------------------------
-@app.get("/api/dashboard/stats")
-def get_dashboard_stats(current_user=Depends(get_current_user)):
-    if not current_user:
-        return {"error": "Authentication required"}
-
-    user_dreams = [d for d in dreams_db.values() if d.get("user_id") == current_user["id"]]
-    return {
-        "dream_count": len(user_dreams),
-        "lucid_count": 0,
-        "lucid_percentage": 0,
-        "current_streak": 1 if user_dreams else 0,
-        "longest_streak": 1 if user_dreams else 0,
-        "ai_creations_count": len([d for d in user_dreams if d.get("ai_image") or d.get("ai_video")]),
-        "mood_distribution": {"peaceful": 60, "excited": 30, "mysterious": 10},
-        "recent_dreams": user_dreams[-3:],
-    }
-
-
-@app.get("/api/gallery/dreams")
-def get_gallery():
-    public_dreams = [
-        d for d in dreams_db.values()
-        if d.get("is_public", False) and (d.get("ai_image") or d.get("ai_video"))
-    ]
-
-    if not public_dreams:
-        return [
-            {
-                "id": "sample_1",
-                "content": "A magical forest filled with glowing butterflies",
-                "mood": "mystical",
-                "tags": ["nature", "magic"],
-                "user_name": "DreamExplorer",
-                "user_role": "dreamer",
-                "ai_image": None,
-                "created_at": now_iso(),
-                "has_liked": False,
-            }
-        ]
-
-    return public_dreams[-10:]
-
-
-@app.get("/api/challenges")
-def get_challenges():
-    return [
-        {
-            "id": "weekly-lucid",
-            "title": "Weekly Lucid Challenge",
-            "description": "Achieve lucid dreaming 3 times this week",
-            "type": "lucid_count",
-            "target": 3,
-            "reward": "Special badge + 100 points",
-            "starts_at": "2025-01-20T00:00:00Z",
-            "ends_at": "2025-01-27T23:59:59Z",
-            "is_active": True,
-        }
-    ]
-
-
-@app.get("/api/feed")
-def get_feed():
-    return []
-
-
-# -----------------------------
-# Local dev / Railway
+# Run
 # -----------------------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
