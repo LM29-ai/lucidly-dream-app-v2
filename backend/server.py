@@ -140,7 +140,7 @@ def health_check():
         "status": "healthy",
         "timestamp": now_iso(),
         "mongo_configured": bool(MONGO_URL),
-        "db_name": (db.name if db else None),
+        "db_name": (db.name if db is not None else None),
     }
 
 
