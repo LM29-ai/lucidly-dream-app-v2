@@ -296,6 +296,19 @@ def get_dream(dream_id: str, current_user=Depends(require_user)):
         raise HTTPException(status_code=404, detail="Dream not found")
     return objid_to_str(doc)
 
+content = (dream_data.get("content") or "").strip()
+title = (dream_data.get("title") or "").strip()
+if not title:
+    # auto-title from content
+    title = content[:40] + ("..." if len(content) > 40 else "")
+
+dream = {
+    "id": dream_id,
+    "user_id": current_user["id"],
+    "title": title,
+    "content": content,
+    ...
+}
 
 # -----------------------------
 # AI Endpoints (mock but functional + protected)
