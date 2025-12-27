@@ -258,6 +258,8 @@ def get_dreams(current_user=Depends(require_user)):
     docs = list(dreams_col.find({"user_id": user_id}).sort("created_at", -1))
     return [objid_to_str(d) for d in docs]
 
+dream.setdefault("title", (dream.get("content","")[:40] + "...") if dream.get("content") else "Untitled Dream")
+
 
 @app.post("/api/dreams")
 def create_dream(dream_data: dict, current_user=Depends(require_user)):
