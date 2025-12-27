@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiClient, setAuthToken } from "../services/api"; // adjust path if needed
+import { apiClient, setAuthToken } from "./api"; // adjust path if needed
 
 interface User {
-  id?: string;        // backend may return id
-  user_id?: string;   // backend may return user_id
+  id: string;
   email: string;
   name: string;
   is_premium?: boolean;
@@ -13,15 +12,12 @@ interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  loading: boolean;
-
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
+  loading: boolean;
   refreshUser: () => Promise<void>;
 }
-
-const AUTH_TOKEN_KEY = "authToken";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -31,61 +27,64 @@ export const useAuth = () => {
   return ctx;
 };
 
+const TOKEN_KEY = "authToken";
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const setToken = async (newToken: string | null) => {
     setTokenState(newToken);
     setAuthToken(newToken);
-
     if (newToken) {
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, newToken);
+      await AsyncStorage.setItem(TOKEN_KEY, newToken);
     } else {
-      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+      await AsyncStorage.removeItem(TOKEN_KEY);
     }
   };
 
-  // Hydrate token + user on app launch
+  const refreshUser = async () => {
+    if (!token) return;
+    try {
+      const res = await apiClient.get("/auth/me");
+      if (res?.data?.error) throw new Error(res.data.error);
+      setUser(res.data);
+    } catch (e) {
+      // token invalid → force logout
+      await logout();
+    }
+  };
+
+  // Boot: load saved token and fetch user
   useEffect(() => {
     (async () => {
       try {
-        const savedToken = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-        if (savedToken) {
-          setTokenState(savedToken);
-          setAuthToken(savedToken);
-
-          // Try to load user
-          const meRes = await apiClient.get("/auth/me");
-          setUser(meRes.data);
+        const saved = await AsyncStorage.getItem(TOKEN_KEY);
+        if (saved) {
+          setTokenState(saved);
+          setAuthToken(saved);
         }
-      } catch (e) {
-        // If token invalid, clear it
-        await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-        setAuthToken(null);
-        setTokenState(null);
-        setUser(null);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
+  // After token set, fetch user
+  useEffect(() => {
+    if (token) refreshUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Your backend currently ignores password; kept for future compatibility
       const res = await apiClient.post("/auth/login", { email, password });
-      const newToken = res.data?.token;
-      const newUser = res.data?.user;
+      if (res?.data?.error) throw new Error(res.data.error);
 
-      if (!newToken || !newUser) {
-        throw new Error("Invalid login response from server");
-      }
-
-      await setToken(newToken);
-      setUser(newUser);
+      await setToken(res.data.token);
+      setUser(res.data.user);
     } finally {
       setLoading(false);
     }
@@ -95,50 +94,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       const res = await apiClient.post("/auth/register", { email, password, name });
-      const newToken = res.data?.token;
-      const newUser = res.data?.user;
+      if (res?.data?.error) throw new Error(res.data.error);
 
-      if (!newToken || !newUser) {
-        throw new Error("Invalid register response from server");
-      }
-
-      await setToken(newToken);
-      setUser(newUser);
+      await setToken(res.data.token);
+      setUser(res.data.user);
     } finally {
       setLoading(false);
     }
   };
 
   const logout = async () => {
-    setLoading(true);
-    try {
-      // Optional server-side logout if endpoint exists
-      // (safe even if it fails; we still clear locally)
-      try {
-        await apiClient.post("/auth/logout");
-      } catch (_) {}
-
-      setUser(null);
-      await setToken(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const refreshUser = async () => {
-    if (!token) return;
-    const res = await apiClient.get("/auth/me");
-    setUser(res.data);
+    setUser(null);
+    await setToken(null);
   };
 
   const value = useMemo(
     () => ({
       user,
       token,
-      loading,
       login,
       register,
       logout,
+      loading,
       refreshUser,
     }),
     [user, token, loading]
