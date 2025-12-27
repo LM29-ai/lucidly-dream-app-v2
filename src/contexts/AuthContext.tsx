@@ -1,12 +1,13 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiClient, setAuthToken } from "./api"; // adjust path if needed
+import { apiClient, setAuthToken } from "../services/api";
 
 interface User {
   id: string;
   email: string;
   name: string;
   is_premium?: boolean;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -16,6 +17,7 @@ interface AuthContextType {
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
+  refreshing: boolean;
   refreshUser: () => Promise<void>;
 }
 
@@ -31,60 +33,57 @@ const TOKEN_KEY = "authToken";
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setTokenState] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(true);
 
-  const setToken = async (newToken: string | null) => {
-    setTokenState(newToken);
-    setAuthToken(newToken);
-    if (newToken) {
-      await AsyncStorage.setItem(TOKEN_KEY, newToken);
-    } else {
-      await AsyncStorage.removeItem(TOKEN_KEY);
-    }
-  };
-
-  const refreshUser = async () => {
-    if (!token) return;
-    try {
-      const res = await apiClient.get("/auth/me");
-      if (res?.data?.error) throw new Error(res.data.error);
-      setUser(res.data);
-    } catch (e) {
-      // token invalid → force logout
-      await logout();
-    }
-  };
-
-  // Boot: load saved token and fetch user
+  // Load token on app start
   useEffect(() => {
     (async () => {
       try {
-        const saved = await AsyncStorage.getItem(TOKEN_KEY);
-        if (saved) {
-          setTokenState(saved);
-          setAuthToken(saved);
+        const stored = await AsyncStorage.getItem(TOKEN_KEY);
+        if (stored) {
+          setToken(stored);
+          setAuthToken(stored);
+          await refreshUser(stored);
         }
       } finally {
-        setLoading(false);
+        setRefreshing(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // After token set, fetch user
-  useEffect(() => {
-    if (token) refreshUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  const refreshUser = async (overrideToken?: string) => {
+    const t = overrideToken ?? token;
+    if (!t) return;
+
+    try {
+      setAuthToken(t);
+      const res = await apiClient.get("/auth/me");
+      setUser(res.data);
+    } catch (e) {
+      // Token invalid/expired → hard reset
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      setAuthToken(null);
+      setToken(null);
+      setUser(null);
+    }
+  };
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
       const res = await apiClient.post("/auth/login", { email, password });
-      if (res?.data?.error) throw new Error(res.data.error);
+      const t = res.data?.token;
+      const u = res.data?.user;
 
-      await setToken(res.data.token);
-      setUser(res.data.user);
+      if (!t || !u) throw new Error("Missing token/user from backend");
+
+      await AsyncStorage.setItem(TOKEN_KEY, t);
+      setAuthToken(t);
+      setToken(t);
+      setUser(u);
     } finally {
       setLoading(false);
     }
@@ -94,32 +93,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       const res = await apiClient.post("/auth/register", { email, password, name });
-      if (res?.data?.error) throw new Error(res.data.error);
+      const t = res.data?.token;
+      const u = res.data?.user;
 
-      await setToken(res.data.token);
-      setUser(res.data.user);
+      if (!t || !u) throw new Error("Missing token/user from backend");
+
+      await AsyncStorage.setItem(TOKEN_KEY, t);
+      setAuthToken(t);
+      setToken(t);
+      setUser(u);
     } finally {
       setLoading(false);
     }
   };
 
   const logout = async () => {
+    try {
+      // tell backend to invalidate session too (important)
+      await apiClient.post("/auth/logout");
+    } catch {
+      // ignore
+    }
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    setAuthToken(null);
+    setToken(null);
     setUser(null);
-    await setToken(null);
   };
 
-  const value = useMemo(
-    () => ({
-      user,
-      token,
-      login,
-      register,
-      logout,
-      loading,
-      refreshUser,
-    }),
-    [user, token, loading]
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        register,
+        logout,
+        loading,
+        refreshing,
+        refreshUser: () => refreshUser(),
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
   );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
