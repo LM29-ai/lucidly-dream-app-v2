@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 from datetime import datetime
+from bson import ObjectId
+from bson.errors import InvalidId
 import os
 import uvicorn
 from typing import Dict, Any
@@ -247,6 +249,22 @@ def reset_user_tokens(current_user=Depends(require_user)):
         "user": objid_to_str(updated),
     }
 
+
+@app.delete("/api/dreams/{dream_id}")
+def delete_dream(dream_id: str, current_user = Depends(get_current_user)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    try:
+        oid = ObjectId(dream_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid dream id")
+
+    result = dreams_col.delete_one({"_id": oid, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Dream not found")
+
+    return {"ok": True, "deleted_id": dream_id}
 
 # -----------------------------
 # Dreams (Mongo-backed + protected)
