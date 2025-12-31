@@ -1,1 +1,26 @@
+{
+  "name": "lucidly-frontend",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "expo": "~54.0.0",
+    "expo-router": "~5.0.0",
+    "expo-status-bar": "~3.0.0",
+    "react": "18.2.0",
+    "react-native": "0.74.7",
+    "@react-native-async-storage/async-storage": "1.24.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "typescript": "^5.4.0"
+  }
+}
 
