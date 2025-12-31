@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Lucidly",
+    "slug": "lucidly",
+    "scheme": "lucidly",
+    "plugins": ["expo-router"],
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
