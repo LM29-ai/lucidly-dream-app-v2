@@ -1,42 +1,40 @@
 import axios from "axios";
 
-const API_BASE_URL = "https://lucidly-dream-app-v2-production.up.railway.app";
+// IMPORTANT:
+// - Set EXPO_PUBLIC_API_BASE_URL in your frontend environment.
+// - Example value: https://api.lucidlydreams.com
+// - Do NOT include /api at the end; we add it below.
+
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") ||
+  "https://api.lucidlydreams.com";
 
 export const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api`,
   headers: { "Content-Type": "application/json" },
 });
 
-let currentToken: string | null = null;
+// Attach token automatically if present
+apiClient.interceptors.request.use(async (config) => {
+  // If you store token in AsyncStorage on native and localStorage on web,
+  // you can branch here. Keep it simple:
+  const token =
+    (typeof window !== "undefined" && window.localStorage?.getItem("authToken")) ||
+    null;
 
-export const setAuthToken = (token: string | null) => {
-  currentToken = token;
-};
-
-// Attach Authorization header on every request
-apiClient.interceptors.request.use((config) => {
-  if (currentToken) {
+  if (token) {
     config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${currentToken}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// Optional: if 401, you can handle global logout in UI logic
-apiClient.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    return Promise.reject(err);
-  }
-);
-
 export interface Dream {
   id: string;
-  title: string;
+  title?: string;       // backend may now include it
   content: string;
   created_at: string;
   mood?: string;
   tags?: string[];
   is_public?: boolean;
 }
-
