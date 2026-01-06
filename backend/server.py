@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Body
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
@@ -8,6 +8,8 @@ import os
 import secrets
 import hashlib
 import base64
+import requests
+import time
 
 from pymongo import MongoClient
 from bson import ObjectId
@@ -20,9 +22,13 @@ MONGO_URL = os.getenv("MONGO_URL", "").strip()
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "lucidly").strip()
 TOKEN_TTL_DAYS = int(os.getenv("TOKEN_TTL_DAYS", "30"))
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com").strip().rstrip("/")
+
+LUMA_API_KEY = os.getenv("LUMA_API_KEY", "").strip()
+LUMA_BASE_URL = os.getenv("LUMA_BASE_URL", "https://api.lumalabs.ai").strip().rstrip("/")
+
 if not MONGO_URL:
-    # We allow app to start so Railway healthcheck can show the error clearly
-    # but protected endpoints will fail if DB isn't connected.
     mongo_client = None
     db = None
 else:
@@ -55,7 +61,6 @@ def oid(s: str) -> ObjectId:
 
 
 def public_user(u: Dict[str, Any]) -> Dict[str, Any]:
-    # Never return password hash/salt
     return {
         "id": str(u["_id"]),
         "email": u.get("email"),
@@ -72,11 +77,10 @@ def public_user(u: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def dream_to_api(d: Dict[str, Any]) -> Dict[str, Any]:
-    # Ensure these fields always exist (prevents UI regressions)
     return {
         "id": str(d["_id"]),
         "user_id": str(d.get("user_id")),
-        "title": d.get("title", "") or "",  # ✅ always present
+        "title": d.get("title", "") or "",
         "content": d.get("content", "") or "",
         "mood": d.get("mood", "peaceful") or "peaceful",
         "tags": d.get("tags", []) or [],
@@ -95,7 +99,6 @@ def require_db():
     return True
 
 
-# Password hashing (no extra libs required)
 def hash_password(password: str) -> Dict[str, str]:
     salt = os.urandom(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 150_000)
@@ -106,6 +109,8 @@ def hash_password(password: str) -> Dict[str, str]:
 
 
 def verify_password(password: str, salt_b64: str, hash_b64: str) -> bool:
+    if not salt_b64 or not hash_b64:
+        return False
     salt = base64.b64decode(salt_b64.encode("utf-8"))
     dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 150_000)
     return base64.b64encode(dk).decode("utf-8") == hash_b64
@@ -131,9 +136,7 @@ app.add_middleware(
 security = HTTPBearer(auto_error=False)
 
 
-def get_current_user(
-    creds: Optional[HTTPAuthorizationCredentials] = Depends(security),
-):
+def get_current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     require_db()
     if not creds:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -145,7 +148,6 @@ def get_current_user(
 
     user = users_col.find_one({"_id": sess["user_id"]})
     if not user:
-        # stale session
         sessions_col.delete_one({"token": token})
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -162,10 +164,8 @@ def root():
 
 @app.get("/api/health")
 def health_check():
-    # Health should not 500 due to bool(db) checks etc.
     ok = db is not None
     details = {"db_connected": ok, "db_name": (db.name if db is not None else None), "ts": now_iso()}
-    # If DB exists, attempt ping for real connectivity
     if db is not None:
         try:
             mongo_client.admin.command("ping")
@@ -213,6 +213,19 @@ class DreamPatch(BaseModel):
     is_public: Optional[bool] = None
 
 
+class ImageGenPayload(BaseModel):
+    style: str = "Artistic"
+
+
+class VideoGenPayload(BaseModel):
+    style: str = "cinematic"
+    duration_seconds: int = 5
+
+
+class LucyPayload(BaseModel):
+    question: Optional[str] = None
+
+
 # -----------------------------
 # Auth
 # -----------------------------
@@ -249,11 +262,7 @@ def register(payload: RegisterPayload):
     user = users_col.find_one({"_id": ins.inserted_id})
 
     token = new_token()
-    sessions_col.insert_one({
-        "token": token,
-        "user_id": user["_id"],
-        "created_at": now_iso(),
-    })
+    sessions_col.insert_one({"token": token, "user_id": user["_id"], "created_at": now_iso()})
 
     return {"token": token, "token_type": "bearer", "user": public_user(user)}
 
@@ -270,11 +279,7 @@ def login(payload: LoginPayload):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = new_token()
-    sessions_col.insert_one({
-        "token": token,
-        "user_id": user["_id"],
-        "created_at": now_iso(),
-    })
+    sessions_col.insert_one({"token": token, "user_id": user["_id"], "created_at": now_iso()})
 
     return {"token": token, "token_type": "bearer", "user": public_user(user)}
 
@@ -286,7 +291,6 @@ def me(ctx=Depends(get_current_user)):
 
 @app.post("/api/auth/logout")
 def logout(ctx=Depends(get_current_user)):
-    # ✅ server-side token invalidation
     sessions_col.delete_one({"token": ctx["token"]})
     return {"ok": True}
 
@@ -294,17 +298,12 @@ def logout(ctx=Depends(get_current_user)):
 @app.delete("/api/auth/account")
 def delete_account(ctx=Depends(get_current_user)):
     user = ctx["user"]
-    token = ctx["token"]
-
     # delete sessions
     sessions_col.delete_many({"user_id": user["_id"]})
     # delete dreams
     dreams_col.delete_many({"user_id": user["_id"]})
     # delete user
     users_col.delete_one({"_id": user["_id"]})
-
-    # also ensure current token is invalidated
-    sessions_col.delete_one({"token": token})
     return {"ok": True}
 
 
@@ -402,6 +401,214 @@ def delete_dream(dream_id: str, ctx=Depends(get_current_user)):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Dream not found")
     return {"ok": True}
+
+
+# -----------------------------
+# AI: Image Generation (OpenAI)
+# -----------------------------
+@app.post("/api/dreams/{dream_id}/generate-image")
+def generate_image(dream_id: str, payload: ImageGenPayload, ctx=Depends(get_current_user)):
+    require_db()
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured on the backend")
+
+    user = ctx["user"]
+    d = dreams_col.find_one({"_id": oid(dream_id), "user_id": user["_id"]})
+    if not d:
+        raise HTTPException(status_code=404, detail="Dream not found")
+
+    style = (payload.style or "Artistic").strip()
+    prompt = (
+        f"Create a high-quality dreamlike image in {style} style.\n\n"
+        f"Dream title: {d.get('title','')}\n"
+        f"Dream content: {d.get('content','')}\n"
+        f"Mood: {d.get('mood','peaceful')}\n"
+        f"Tags: {', '.join(d.get('tags', []) or [])}\n"
+    )
+
+    # NOTE: OpenAI image endpoints can vary by account/model.
+    # This implementation uses a generic HTTP call and expects either a URL or base64.
+    try:
+        r = requests.post(
+            f"{OPENAI_BASE_URL}/v1/images/generations",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "prompt": prompt,
+                "size": "1024x1024",
+                # "model": "gpt-image-1",  # uncomment if your account supports it
+            },
+            timeout=60,
+        )
+        if r.status_code >= 400:
+            raise HTTPException(status_code=502, detail=f"OpenAI image error: {r.status_code} {r.text[:300]}")
+
+        data = r.json()
+        image_url = None
+        image_b64 = None
+
+        # Common shapes:
+        # { data: [ { url: "..." } ] }
+        # { data: [ { b64_json: "..." } ] }
+        if isinstance(data, dict) and "data" in data and data["data"]:
+            first = data["data"][0]
+            image_url = first.get("url")
+            image_b64 = first.get("b64_json")
+
+        update = {"updated_at": now_iso()}
+        if image_url:
+            update["ai_image"] = image_url
+        elif image_b64:
+            update["ai_image"] = f"data:image/png;base64,{image_b64}"
+        else:
+            raise HTTPException(status_code=502, detail="OpenAI image response missing url/base64")
+
+        dreams_col.update_one({"_id": oid(dream_id), "user_id": user["_id"]}, {"$set": update})
+        fresh = dreams_col.find_one({"_id": oid(dream_id), "user_id": user["_id"]})
+        return {"ok": True, "dream": dream_to_api(fresh)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Image generation failed: {type(e).__name__}")
+
+
+# -----------------------------
+# AI: Lucy Interpretation (OpenAI text)
+# -----------------------------
+@app.post("/api/dreams/{dream_id}/lucy-interpretation")
+def lucy_interpretation(dream_id: str, payload: LucyPayload, ctx=Depends(get_current_user)):
+    require_db()
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured on the backend")
+
+    user = ctx["user"]
+    d = dreams_col.find_one({"_id": oid(dream_id), "user_id": user["_id"]})
+    if not d:
+        raise HTTPException(status_code=404, detail="Dream not found")
+
+    question = (payload.question or "Interpret this dream and provide gentle, practical insights.").strip()
+
+    try:
+        r = requests.post(
+            f"{OPENAI_BASE_URL}/v1/chat/completions",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": "You are Lucy, a warm dream interpretation guide. Be supportive and concise."},
+                    {"role": "user", "content": f"{question}\n\nTITLE: {d.get('title','')}\nCONTENT: {d.get('content','')}\nMOOD: {d.get('mood','')}\nTAGS: {d.get('tags',[])}"}
+                ],
+                "temperature": 0.7,
+            },
+            timeout=60,
+        )
+        if r.status_code >= 400:
+            raise HTTPException(status_code=502, detail=f"OpenAI chat error: {r.status_code} {r.text[:300]}")
+
+        data = r.json()
+        text = None
+        if data.get("choices"):
+            text = data["choices"][0]["message"]["content"]
+
+        if not text:
+            raise HTTPException(status_code=502, detail="OpenAI response missing content")
+
+        dreams_col.update_one(
+            {"_id": oid(dream_id), "user_id": user["_id"]},
+            {"$set": {"ai_interpretation": text, "updated_at": now_iso()}}
+        )
+        fresh = dreams_col.find_one({"_id": oid(dream_id), "user_id": user["_id"]})
+        return {"ok": True, "dream": dream_to_api(fresh)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lucy interpretation failed: {type(e).__name__}")
+
+
+# -----------------------------
+# AI: Video Generation (Luma)
+# -----------------------------
+@app.post("/api/dreams/{dream_id}/generate-video")
+def generate_video(dream_id: str, payload: VideoGenPayload, ctx=Depends(get_current_user)):
+    require_db()
+    if not LUMA_API_KEY:
+        raise HTTPException(status_code=500, detail="LUMA_API_KEY is not configured on the backend")
+
+    user = ctx["user"]
+    d = dreams_col.find_one({"_id": oid(dream_id), "user_id": user["_id"]})
+    if not d:
+        raise HTTPException(status_code=404, detail="Dream not found")
+
+    prompt = (
+        f"{d.get('title','')}\n"
+        f"{d.get('content','')}\n"
+        f"Mood: {d.get('mood','peaceful')}. Style: {payload.style}."
+    )
+
+    # Luma API shapes can vary by account. This uses a common “create generation then poll” pattern.
+    try:
+        create = requests.post(
+            f"{LUMA_BASE_URL}/v1/generations",
+            headers={"Authorization": f"Bearer {LUMA_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "prompt": prompt,
+                "duration_seconds": max(2, min(int(payload.duration_seconds), 12)),
+                "aspect_ratio": "16:9",
+            },
+            timeout=60,
+        )
+        if create.status_code >= 400:
+            raise HTTPException(status_code=502, detail=f"Luma create error: {create.status_code} {create.text[:300]}")
+
+        job = create.json()
+        gen_id = job.get("id") or job.get("generation_id")
+        if not gen_id:
+            raise HTTPException(status_code=502, detail="Luma response missing generation id")
+
+        # Poll briefly (keep it short for Railway request limits)
+        video_url = None
+        for _ in range(10):  # ~10-20s max
+            time.sleep(2)
+            status = requests.get(
+                f"{LUMA_BASE_URL}/v1/generations/{gen_id}",
+                headers={"Authorization": f"Bearer {LUMA_API_KEY}"},
+                timeout=30,
+            )
+            if status.status_code >= 400:
+                continue
+            sdata = status.json()
+            state = (sdata.get("state") or sdata.get("status") or "").lower()
+            if state in {"completed", "succeeded", "success"}:
+                # Try common locations for URL
+                video_url = (
+                    sdata.get("video_url")
+                    or (sdata.get("assets") or {}).get("video")
+                    or (sdata.get("output") or {}).get("video")
+                )
+                break
+            if state in {"failed", "error"}:
+                raise HTTPException(status_code=502, detail="Luma generation failed")
+
+        if not video_url:
+            # Return job id so frontend can poll if desired
+            dreams_col.update_one(
+                {"_id": oid(dream_id), "user_id": user["_id"]},
+                {"$set": {"updated_at": now_iso()}}
+            )
+            return {"ok": True, "status": "processing", "generation_id": gen_id}
+
+        dreams_col.update_one(
+            {"_id": oid(dream_id), "user_id": user["_id"]},
+            {"$set": {"ai_video": video_url, "updated_at": now_iso()}}
+        )
+        fresh = dreams_col.find_one({"_id": oid(dream_id), "user_id": user["_id"]})
+        return {"ok": True, "dream": dream_to_api(fresh)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Video generation failed: {type(e).__name__}")
 
 
 # -----------------------------
