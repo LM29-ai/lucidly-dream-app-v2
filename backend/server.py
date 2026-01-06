@@ -35,9 +35,9 @@ else:
     )
     db = mongo_client[MONGO_DB_NAME]
 
-users_col = db["users"] if db else None
-dreams_col = db["dreams"] if db else None
-sessions_col = db["sessions"] if db else None
+users_col = db["users"] if db is not None else None
+dreams_col = db["dreams"] if db is not None else None
+sessions_col = db["sessions"] if db is not None else None
 
 
 # -----------------------------
