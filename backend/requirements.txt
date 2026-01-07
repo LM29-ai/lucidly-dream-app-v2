@@ -3,3 +3,4 @@ uvicorn[standard]
 pymongo
 python-dotenv
 requests==2.32.3
+
